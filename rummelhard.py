@@ -16,15 +16,18 @@ def rumelhard_problem_rnd(length):
     return problem_vector, float(symmetric)
 
 
+# todo: use and accumulate gradients over.
 def rumelhard_problem(length):
     assert length % 2 == 0
-    # generate a binary vector
-    problem_vector = np.random.randn(int(length))
-    problem_vector = np.greater(problem_vector, 0).astype(np.float32)
-    # check symmetry
-    first_half, second_half = np.split(problem_vector, 2)
-    symmetric = np.array_equal(first_half, np.flip(second_half, 0))
-    return problem_vector, float(symmetric)
+    max_val = np.power(2, length)
+    batch_lst = []
+    for i in range(max_val):
+        binary_str = np.binary_repr(i, length)
+        binary_array = np.array([int(bstr) for bstr in binary_str])
+        first_half, second_half = np.split(binary_array, 2)
+        symmetric = np.array_equal(first_half, np.flip(second_half, 0))
+        batch_lst.append((binary_array, float(symmetric)))
+    return batch_lst
 
 
 def get_batch(length, size):
