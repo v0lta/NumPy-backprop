@@ -1,4 +1,7 @@
 # A reimplementation of the mirror symmetry example by rumelhart et al.
+# Known issues:
+# needs to be run multiple times to fully converge.
+import random
 import numpy as np
 import matplotlib.pyplot as plt
 import ipdb
@@ -16,7 +19,7 @@ def rumelhard_problem_rnd(length):
     return problem_vector, float(symmetric)
 
 
-# todo: use and accumulate gradients over.
+# todo: use and accumulate gradients
 def rumelhard_problem(length):
     assert length % 2 == 0
     max_val = np.power(2, length)
@@ -27,6 +30,7 @@ def rumelhard_problem(length):
         first_half, second_half = np.split(binary_array, 2)
         symmetric = np.array_equal(first_half, np.flip(second_half, 0))
         batch_lst.append((binary_array, float(symmetric)))
+    random.shuffle(batch_lst)
     return batch_lst
 
 
