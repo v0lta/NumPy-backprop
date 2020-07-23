@@ -4,8 +4,6 @@
 import random
 import numpy as np
 import matplotlib.pyplot as plt
-import ipdb
-debug_here = ipdb.set_trace
 
 
 def rumelhard_problem_rnd(length):
@@ -129,6 +127,7 @@ for i in range(iterations):
     loss_lst.append(loss)
 
 plt.plot(loss_lst)
+plt.title('Loss')
 plt.show()
 
 # test the results
