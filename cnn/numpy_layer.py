@@ -116,7 +116,8 @@ def test_conv():
     kernel = np.array([[0, 0, 0],
                       [0, 1, 0],
                       [0, 0, 0]])
-    conv = ConvLayer.convolution(kernel=kernel, img=img_data_train[0, :, :], stride=1)
+    conv = ConvLayer.convolution(kernel=kernel, img=img_data_train[0, :, :],
+                                 stride=1)
     plt.imshow(conv.reshape(26, 26))
     plt.title('conv_result '+str(lbl_data_train[0]))
     plt.show()
@@ -124,7 +125,8 @@ def test_conv():
     kernel = np.array([[1./9., 1./9., 1./9.],
                       [1./9., 1./9., 1./9.],
                       [1./9., 1./9., 1./9.]])
-    conv = ConvLayer.convolution(kernel=kernel, img=img_data_train[0, :, :], stride=1)
+    conv = ConvLayer.convolution(kernel=kernel, img=img_data_train[0, :, :],
+                                 stride=1)
     plt.imshow(conv.reshape(26, 26))
     plt.title('mean_conv_result '+str(lbl_data_train[0]))
     plt.show()

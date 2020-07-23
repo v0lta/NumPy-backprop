@@ -126,7 +126,7 @@ for i in range(iterations):
     net.update(top_grad, left_grad, right_grad, epsilon, alpha)
     loss_lst.append(loss)
 
-plt.plot(loss_lst)
+plt.semilogy(loss_lst)
 plt.title('Loss')
 plt.show()
 
