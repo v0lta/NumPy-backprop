@@ -16,7 +16,7 @@ dense = DenseLayer(100, 100)
 relu = ReLu()
 dense2 = DenseLayer(100, 100)
 mse = MSELoss()
-iterations = 8000
+iterations = 9000
 
 
 plt.plot(x, y)
