@@ -48,7 +48,7 @@ for i in range(iterations):
 
     dl = mse.backward(y, y_hat)
     dw2, dx2 = dense2.backward(inputs=h_nl, prev_grad=dl)
-    dx2 = act.backward(dx2)
+    dx2 = act.backward(inputs=h, prev_dev=dx2)
     dw, dx = dense.backward(inputs=x, prev_grad=dx2)
     dense.weight += -lr*np.mean(dw, axis=0)
     dense2.weight += -lr*np.mean(dw2, axis=0)

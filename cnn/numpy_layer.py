@@ -9,8 +9,8 @@ import matplotlib.pyplot as plt
 
 def normalize(data):
     mean = np.mean(data)
-    var = np.mean(data)
-    return (data-mean)/var, mean, var
+    std = np.std(data)
+    return (data-mean)/std, mean, std
 
 
 def im2col(img, kernel_shape, stride, padding='VALID'):
@@ -29,12 +29,21 @@ def im2col(img, kernel_shape, stride, padding='VALID'):
     return np.stack(patches)
 
 
+
+
+class CrossEntropyCost(object):
+
+    def forward(self, label, out):
+        return np.sum(np.nan_to_num(-label*np.log(out)-(1-label)*np.log(1-out)))
+
+    def backward(self, label, out):
+        return (out-label)
+
+
 class MSELoss(object):
     '''
     The cross-entropy loss of the predictions
     '''
-    def init():
-        super()
 
     def forward(self, label, out):
         diff = out - label
@@ -47,7 +56,7 @@ class MSELoss(object):
 class DenseLayer(object):
     def __init__(self, in_shape, out_shape):
         self.weight = np.zeros([1, out_shape, in_shape])
-        self.weight += np.random.uniform(-0.02, 0.02, [1, out_shape, in_shape])
+        self.weight += np.random.normal(size=[1, out_shape, in_shape])*0.01
         # self.weight = self.weight/np.linalg.norm(self.weight)
         
     def forward(self, inputs):
@@ -78,8 +87,8 @@ class Sigmoid(object):
     def forward(self, inputs):
         return self.sigmoid(inputs)
     
-    def backward(self, inputs):
-        return self.sigmoid(inputs)*(1 - self.sigmoid(inputs))*inputs
+    def backward(self, inputs, prev_dev):
+        return self.sigmoid(inputs)*(1 - self.sigmoid(inputs))*prev_dev
 
 
 
