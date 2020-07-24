@@ -6,6 +6,7 @@ from numpy_layer import normalize
 from numpy_layer import DenseLayer
 from numpy_layer import MSELoss
 from numpy_layer import ReLu
+from numpy_layer import Sigmoid
 
 
 def get_train_data():
@@ -25,19 +26,20 @@ if __name__ == '__main__':
     img_data_train, lbl_data_train = get_train_data()
     img_data_train, mean, var = normalize(img_data_train)
 
-    lr = 0.01
-    batch_size = 100
-    dense = DenseLayer(784, 1024)
+    lr = 0.1
+    batch_size = 50
+    dense = DenseLayer(784, 512)
     relu = ReLu()
-    dense2 = DenseLayer(1024, 512)
+    dense2 = DenseLayer(512, 256)
     relu2 = ReLu()
-    dense3 = DenseLayer(512, 10)
+    dense3 = DenseLayer(256, 10)
+    sig = Sigmoid()
     mse = MSELoss()
-    iterations = 100
+    iterations = 10
     loss_lst = []
     acc_lst = []
 
-    for i in range(iterations):
+    for e in range(iterations):
         shuffler = np.random.permutation(len(img_data_train))
         img_data_train = img_data_train[shuffler]
         lbl_data_train = lbl_data_train[shuffler]
@@ -63,10 +65,12 @@ if __name__ == '__main__':
             h1_nl = relu.forward(h1)
             h2 = dense2.forward(h1_nl)
             h2_nl = relu2.forward(h2)
-            y_hat = dense3.forward(h2_nl)
+            h3 = dense3.forward(h2_nl)
+            y_hat = sig.forward(h3)
             loss = mse.forward(y, y_hat)
 
             dl = mse.backward(y, y_hat)
+            dl = sig.backward(dl)
             dw3, dx3 = dense3.backward(inputs=h2_nl, prev_grad=dl)
             dx3 = relu2.backward(dx3)
             dw2, dx2 = dense2.backward(inputs=h1_nl, prev_grad=dx3)
@@ -81,10 +85,15 @@ if __name__ == '__main__':
             true = np.sum((labels == np.squeeze(np.argmax(y_hat, axis=1))).astype(np.float32))
             acc = true/batch_size
             acc_lst.append(acc)
-            print( i,no, loss, acc)
+            if no % 5 == 0:
+                print('e', e,'b', no, 'loss', loss,'acc', acc, 'lr', lr)
 
+        if e % 5 == 0 and e > 0:
+            lr = lr / 2.
 
 plt.plot(loss_lst)
+plt.show()
+plt.plot(acc_lst)
 plt.show()
 
 print('done')

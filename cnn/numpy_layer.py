@@ -47,7 +47,7 @@ class MSELoss(object):
 class DenseLayer(object):
     def __init__(self, in_shape, out_shape):
         self.weight = np.zeros([1, out_shape, in_shape])
-        self.weight += np.random.uniform(-0.01, 0.01, [1, out_shape, in_shape])
+        self.weight += np.random.uniform(-0.02, 0.02, [1, out_shape, in_shape])
         # self.weight = self.weight/np.linalg.norm(self.weight)
         
     def forward(self, inputs):
@@ -68,6 +68,19 @@ class ReLu(object):
     def backward(self, prev_dev):
         prev_dev[prev_dev <= 0] = 0
         return prev_dev
+
+
+class Sigmoid(object):
+
+    def sigmoid(self, inputs):
+        return np.exp(inputs)/(1 + np.exp(inputs))
+
+    def forward(self, inputs):
+        return self.sigmoid(inputs)
+    
+    def backward(self, inputs):
+        return self.sigmoid(inputs)*self.sigmoid(inputs)
+
 
 
 class ConvLayer(object):
