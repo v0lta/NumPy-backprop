@@ -41,27 +41,22 @@ class MSELoss(object):
         return np.mean(0.5*diff*diff)
 
     def backward(self, label, out):
-        return np.expand_dims((out - label), -1)
+        return out - label
 
 
 class DenseLayer(object):
     def __init__(self, in_shape, out_shape):
-        self.weight = np.zeros([out_shape, in_shape])
-        self.weight += np.random.uniform(-0.001, 0.001, [out_shape, in_shape])
-        self.grad_lst = []
-
+        self.weight = np.zeros([1, out_shape, in_shape])
+        self.weight += np.random.uniform(-0.001, 0.001, [1, out_shape, in_shape])
+        
     def forward(self, inputs):
         return np.matmul(self.weight, inputs)
 
     def backward(self, inputs, prev_grad):
-        dw = np.matmul(prev_grad, np.expand_dims(inputs, -1).T)
-        dx = np.matmul(self.weight.T, prev_grad)
-        self.grad_lst.append(dw)
-        batch_grad = np.mean(np.stack(self.grad_lst, axis=0), axis=0)
-        return batch_grad, dx
+        dw = np.matmul(prev_grad, np.transpose(inputs, [0, 2, 1]))
+        dx = np.matmul(np.transpose(self.weight, [0, 2, 1]), prev_grad)
+        return dw, dx
 
-    def reset_grad(self):
-        self.grad_lst = []
 
 class ReLu(object):
 

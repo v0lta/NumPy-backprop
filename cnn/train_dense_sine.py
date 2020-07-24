@@ -7,6 +7,8 @@ from numpy_layer import ReLu
 
 x = np.linspace(0, 10, num=100)
 y = np.sin(x) + np.random.uniform(-0.1, 0.1, size=(100))
+x = np.expand_dims(np.expand_dims(x, -1), 0)
+y = np.expand_dims(np.expand_dims(y, -1), 0)
 lr = 0.01
 
 # plt.plot(x, y)
@@ -19,8 +21,8 @@ mse = MSELoss()
 iterations = 10000
 
 
-plt.plot(x, y)
-plt.plot(x, dense.forward(x))
+plt.plot(np.squeeze(x), np.squeeze(y))
+plt.plot(np.squeeze(x), np.squeeze(dense.forward(x)))
 plt.title('init')
 plt.show()
 
@@ -29,6 +31,8 @@ for i in range(iterations):
 
     x = np.linspace(0, 10, num=100)
     y = np.sin(x) + np.random.uniform(-0.1, 0.1, size=(100))
+    x = np.expand_dims(np.expand_dims(x, -1), 0)
+    y = np.expand_dims(np.expand_dims(y, -1), 0)
 
     h = dense.forward(x)
     h_nl = relu.forward(h)
@@ -48,7 +52,9 @@ for i in range(iterations):
 
 x = np.linspace(0, 10, num=100)
 y = np.sin(x) + np.random.uniform(-0.1, 0.1, size=(100))
-plt.plot(x, y)
-plt.plot(x, dense2.forward(relu.forward(dense.forward(x))))
+x = np.expand_dims(np.expand_dims(x, -1), 0)
+y = np.expand_dims(np.expand_dims(y, -1), 0)
+plt.plot(np.squeeze(x), np.squeeze(y))
+plt.plot(np.squeeze(x), np.squeeze(dense2.forward(relu.forward(dense.forward(x)))))
 plt.title('opt')
 plt.show()

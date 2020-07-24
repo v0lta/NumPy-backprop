@@ -25,16 +25,15 @@ if __name__ == '__main__':
     img_data_train, lbl_data_train = get_train_data()
     img_data_train, mean, var = normalize(img_data_train)
 
-    lr = 0.001
-    batch_size = 50
+    lr = 0.01
+    batch_size = 250
     dense = DenseLayer(784, 1024)
     relu = ReLu()
     dense2 = DenseLayer(1024, 10)
     mse = MSELoss()
-    iterations = 10
+    iterations = 30
     loss_lst = []
-    label_lst = []
-    max_lst = []
+    acc_lst = []
 
     for i in range(iterations):
         img_lst = np.split(img_data_train, img_data_train.shape[0], axis=0)
@@ -48,13 +47,20 @@ if __name__ == '__main__':
         img_batches = np.split(img_data_train, img_data_train.shape[0]//batch_size, axis=0)
         label_batches = np.split(lbl_data_train, lbl_data_train.shape[0]//batch_size, axis=0)
 
-        for b in range(img_data_train.shape[0]):
-            x = img_data_train[b].flatten()
-            label = lbl_data_train[b]
-            
-            y = np.zeros([10])
-            y[label] = 1
-
+        #for b in range(img_data_train.shape[0]):
+        #    x = img_data_train[b].flatten()
+        #    label = lbl_data_train[b]
+        for no, img_batch in enumerate(img_batches):
+            img_batch = np.reshape(img_batch, [img_batch.shape[0], -1])
+            img_batch = np.expand_dims(img_batch, -1)
+            labels = label_batches[no]
+            y = []
+            for b in range(batch_size):
+                one_hot = np.zeros([10])
+                one_hot[labels[b]] = 1
+                y.append(one_hot)
+            y = np.expand_dims(np.stack(y), -1)
+            x = img_batch
             h = dense.forward(x)
             h_nl = relu.forward(h)
             # h_nl = h
@@ -67,23 +73,16 @@ if __name__ == '__main__':
             dw, dx = dense.backward(inputs=x, prev_grad=dx2)
 
 
-            label_lst.append(label)
-            max_lst.append(np.argmax(y_hat))
-            if b % batch_size == 0:
-                dense.weight += -lr*dw
-                dense2.weight += -lr*dw2
-                dense.reset_grad()
-                dense2.reset_grad()
-                loss_lst.append(loss)
+            dense.weight += -lr*np.mean(dw, axis=0)
+            dense2.weight += -lr*np.mean(dw2, axis=0)
+            loss_lst.append(loss)
 
-                true = np.sum(np.stack(label_lst) == np.stack(max_lst).astype(np.float32))
-                acc = true/len(label_lst)
-                print(i,b, loss, acc)
-                max_lst = []
-                label_lst = []
+            true = np.sum((labels == np.squeeze(np.argmax(y_hat, axis=1))).astype(np.float32))
+            acc = true/batch_size
+            acc_lst.append(acc)
+            print(i,no, loss, acc)
 
-print(y)
-print(y_hat)
+
 plt.plot(loss_lst)
 plt.show()
 
