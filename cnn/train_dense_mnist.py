@@ -26,14 +26,14 @@ if __name__ == '__main__':
     img_data_train, lbl_data_train = get_train_data()
     img_data_train, mean, var = normalize(img_data_train)
 
-    lr = 0.1
+    lr = 1.
     batch_size = 50
-    dense = DenseLayer(784, 512)
-    relu = ReLu()
-    dense2 = DenseLayer(512, 256)
-    relu2 = ReLu()
-    dense3 = DenseLayer(256, 10)
-    sig = Sigmoid()
+    dense = DenseLayer(784, 256)
+    act1 = ReLu()
+    dense2 = DenseLayer(256, 128)
+    act2 = ReLu()
+    dense3 = DenseLayer(128, 10)
+    act3 = Sigmoid()
     mse = MSELoss()
     iterations = 10
     loss_lst = []
@@ -62,19 +62,19 @@ if __name__ == '__main__':
             y = np.expand_dims(np.stack(y), -1)
             x = img_batch
             h1 = dense.forward(x)
-            h1_nl = relu.forward(h1)
+            h1_nl = act1.forward(h1)
             h2 = dense2.forward(h1_nl)
-            h2_nl = relu2.forward(h2)
+            h2_nl = act2.forward(h2)
             h3 = dense3.forward(h2_nl)
-            y_hat = sig.forward(h3)
+            y_hat = act3.forward(h3)
             loss = mse.forward(y, y_hat)
 
             dl = mse.backward(y, y_hat)
-            dl = sig.backward(dl)
+            dl = act3.backward(dl)
             dw3, dx3 = dense3.backward(inputs=h2_nl, prev_grad=dl)
-            dx3 = relu2.backward(dx3)
+            dx3 = act2.backward(dx3)
             dw2, dx2 = dense2.backward(inputs=h1_nl, prev_grad=dx3)
-            dx2 = relu.backward(dx2)
+            dx2 = act1.backward(dx2)
             dw, _ = dense.backward(inputs=x, prev_grad=dx2)
 
             dense.weight += -lr*np.mean(dw, axis=0)
@@ -88,8 +88,7 @@ if __name__ == '__main__':
             if no % 5 == 0:
                 print('e', e,'b', no, 'loss', loss,'acc', acc, 'lr', lr)
 
-        if e % 5 == 0 and e > 0:
-            lr = lr / 2.
+        lr = lr * 0.9
 
 plt.plot(loss_lst)
 plt.show()

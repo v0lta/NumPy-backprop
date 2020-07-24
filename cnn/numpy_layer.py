@@ -79,7 +79,7 @@ class Sigmoid(object):
         return self.sigmoid(inputs)
     
     def backward(self, inputs):
-        return self.sigmoid(inputs)*self.sigmoid(inputs)
+        return self.sigmoid(inputs)*(1 - self.sigmoid(inputs))*inputs
 
 
 
