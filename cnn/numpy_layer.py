@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 def normalize(data):
     mean = np.mean(data)
     var = np.mean(data)
-    return (data-mean)/var
+    return (data-mean)/var, mean, var
 
 
 def im2col(img, kernel_shape, stride, padding='VALID'):
@@ -46,8 +46,9 @@ class MSELoss(object):
 
 class DenseLayer(object):
     def __init__(self, in_shape, out_shape):
-        self.weight = np.zeros([in_shape, out_shape])
-        self.weight += np.random.uniform(-0.001, 0.001, [in_shape, out_shape])
+        self.weight = np.zeros([out_shape, in_shape])
+        self.weight += np.random.uniform(-0.001, 0.001, [out_shape, in_shape])
+        self.grad_lst = []
 
     def forward(self, inputs):
         return np.matmul(self.weight, inputs)
@@ -55,8 +56,12 @@ class DenseLayer(object):
     def backward(self, inputs, prev_grad):
         dw = np.matmul(prev_grad, np.expand_dims(inputs, -1).T)
         dx = np.matmul(self.weight.T, prev_grad)
-        return dw, dx
+        self.grad_lst.append(dw)
+        batch_grad = np.mean(np.stack(self.grad_lst, axis=0), axis=0)
+        return batch_grad, dx
 
+    def reset_grad(self):
+        self.grad_lst = []
 
 class ReLu(object):
 
