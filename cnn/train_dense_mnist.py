@@ -30,14 +30,17 @@ if __name__ == '__main__':
     relu = ReLu()
     dense2 = DenseLayer(1024, 10)
     mse = MSELoss()
-    iterations = 2
+    iterations = 10
     loss_lst = []
+    label_lst = []
+    max_lst = []
 
     for i in range(iterations):
 
         for b in range(img_data_train.shape[0]):
             x = img_data_train[b].flatten()
             label = lbl_data_train[b]
+            
             y = np.zeros([10])
             y[label] = 1
 
@@ -51,10 +54,26 @@ if __name__ == '__main__':
             dw2, dx2 = dense2.backward(inputs=h_nl, prev_grad=dl)
             dx2 = relu.backward(dx2)
             dw, dx = dense.backward(inputs=x, prev_grad=dx2)
+
+
+            label_lst.append(label)
+            max_lst.append(np.argmax(y_hat))
             if b % batch_size == 0:
                 dense.weight += -lr*dw
                 dense2.weight += -lr*dw2
                 dense.reset_grad()
                 dense2.reset_grad()
-                print(i, b, loss)
                 loss_lst.append(loss)
+
+                true = np.sum(np.stack(label_lst) == np.stack(max_lst).astype(np.float32))
+                acc = true/len(label_lst)
+                print(i,b, loss, acc)
+                max_lst = []
+                label_lst = []
+
+print(y)
+print(y_hat)
+plt.plot(loss_lst)
+plt.show()
+
+print('done')
