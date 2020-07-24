@@ -26,23 +26,21 @@ if __name__ == '__main__':
     img_data_train, mean, var = normalize(img_data_train)
 
     lr = 0.01
-    batch_size = 250
+    batch_size = 100
     dense = DenseLayer(784, 1024)
     relu = ReLu()
-    dense2 = DenseLayer(1024, 10)
+    dense2 = DenseLayer(1024, 512)
+    relu2 = ReLu()
+    dense3 = DenseLayer(512, 10)
     mse = MSELoss()
-    iterations = 30
+    iterations = 100
     loss_lst = []
     acc_lst = []
 
     for i in range(iterations):
-        img_lst = np.split(img_data_train, img_data_train.shape[0], axis=0)
-        lbl_lst = np.split(lbl_data_train, lbl_data_train.shape[0], axis=0)
-        merge_lst = list(zip(img_lst, lbl_lst))
-        random.shuffle(merge_lst)
-        img_lst, lbl_lst = zip(*merge_lst)
-        img_data_train = np.stack(img_lst)
-        lbl_data_train = np.stack(lbl_data_train)
+        shuffler = np.random.permutation(len(img_data_train))
+        img_data_train = img_data_train[shuffler]
+        lbl_data_train = lbl_data_train[shuffler]
 
         img_batches = np.split(img_data_train, img_data_train.shape[0]//batch_size, axis=0)
         label_batches = np.split(lbl_data_train, lbl_data_train.shape[0]//batch_size, axis=0)
@@ -61,26 +59,29 @@ if __name__ == '__main__':
                 y.append(one_hot)
             y = np.expand_dims(np.stack(y), -1)
             x = img_batch
-            h = dense.forward(x)
-            h_nl = relu.forward(h)
-            # h_nl = h
-            y_hat = dense2.forward(h_nl)
+            h1 = dense.forward(x)
+            h1_nl = relu.forward(h1)
+            h2 = dense2.forward(h1_nl)
+            h2_nl = relu2.forward(h2)
+            y_hat = dense3.forward(h2_nl)
             loss = mse.forward(y, y_hat)
 
             dl = mse.backward(y, y_hat)
-            dw2, dx2 = dense2.backward(inputs=h_nl, prev_grad=dl)
+            dw3, dx3 = dense3.backward(inputs=h2_nl, prev_grad=dl)
+            dx3 = relu2.backward(dx3)
+            dw2, dx2 = dense2.backward(inputs=h1_nl, prev_grad=dx3)
             dx2 = relu.backward(dx2)
-            dw, dx = dense.backward(inputs=x, prev_grad=dx2)
-
+            dw, _ = dense.backward(inputs=x, prev_grad=dx2)
 
             dense.weight += -lr*np.mean(dw, axis=0)
             dense2.weight += -lr*np.mean(dw2, axis=0)
+            dense3.weight += -lr*np.mean(dw3, axis=0)
             loss_lst.append(loss)
 
             true = np.sum((labels == np.squeeze(np.argmax(y_hat, axis=1))).astype(np.float32))
             acc = true/batch_size
             acc_lst.append(acc)
-            print(i,no, loss, acc)
+            print( i,no, loss, acc)
 
 
 plt.plot(loss_lst)

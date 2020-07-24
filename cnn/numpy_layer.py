@@ -47,7 +47,8 @@ class MSELoss(object):
 class DenseLayer(object):
     def __init__(self, in_shape, out_shape):
         self.weight = np.zeros([1, out_shape, in_shape])
-        self.weight += np.random.uniform(-0.001, 0.001, [1, out_shape, in_shape])
+        self.weight += np.random.uniform(-0.01, 0.01, [1, out_shape, in_shape])
+        # self.weight = self.weight/np.linalg.norm(self.weight)
         
     def forward(self, inputs):
         return np.matmul(self.weight, inputs)

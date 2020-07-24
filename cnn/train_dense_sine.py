@@ -9,7 +9,7 @@ x = np.linspace(0, 10, num=100)
 y = np.sin(x) + np.random.uniform(-0.1, 0.1, size=(100))
 x = np.expand_dims(np.expand_dims(x, -1), 0)
 y = np.expand_dims(np.expand_dims(y, -1), 0)
-lr = 0.01
+lr = 0.001
 
 # plt.plot(x, y)
 plt.show()
@@ -18,7 +18,8 @@ dense = DenseLayer(100, 100)
 relu = ReLu()
 dense2 = DenseLayer(100, 100)
 mse = MSELoss()
-iterations = 10000
+batch_size = 5
+iterations = 50000//batch_size
 
 
 plt.plot(np.squeeze(x), np.squeeze(y))
@@ -28,11 +29,15 @@ plt.show()
 
 
 for i in range(iterations):
-
-    x = np.linspace(0, 10, num=100)
-    y = np.sin(x) + np.random.uniform(-0.1, 0.1, size=(100))
-    x = np.expand_dims(np.expand_dims(x, -1), 0)
-    y = np.expand_dims(np.expand_dims(y, -1), 0)
+    x_lst = []
+    y_lst = []
+    for b in range(batch_size):
+        x = np.linspace(0, 10, num=100)
+        y = np.sin(x) + np.random.uniform(-0.1, 0.1, size=(100))
+        x_lst.append(x)
+        y_lst.append(y)
+    x = np.expand_dims(np.stack(x_lst, axis=0), axis=-1)
+    y = np.expand_dims(np.stack(y_lst, axis=0), axis=-1)
 
     h = dense.forward(x)
     h_nl = relu.forward(h)
@@ -44,8 +49,8 @@ for i in range(iterations):
     dw2, dx2 = dense2.backward(inputs=h_nl, prev_grad=dl)
     dx2 = relu.backward(dx2)
     dw, dx = dense.backward(inputs=x, prev_grad=dx2)
-    dense.weight += -lr*dw
-    dense2.weight += -lr*dw2
+    dense.weight += -lr*np.mean(dw, axis=0)
+    dense2.weight += -lr*np.mean(dw2, axis=0)
     if i % 100 == 0:
         print(i, loss)
 
