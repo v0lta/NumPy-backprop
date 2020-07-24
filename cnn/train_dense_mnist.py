@@ -1,4 +1,5 @@
 import struct
+import random
 import numpy as np
 import matplotlib.pyplot as plt
 from numpy_layer import normalize
@@ -36,6 +37,16 @@ if __name__ == '__main__':
     max_lst = []
 
     for i in range(iterations):
+        img_lst = np.split(img_data_train, img_data_train.shape[0], axis=0)
+        lbl_lst = np.split(lbl_data_train, lbl_data_train.shape[0], axis=0)
+        merge_lst = list(zip(img_lst, lbl_lst))
+        random.shuffle(merge_lst)
+        img_lst, lbl_lst = zip(*merge_lst)
+        img_data_train = np.stack(img_lst)
+        lbl_data_train = np.stack(lbl_data_train)
+
+        img_batches = np.split(img_data_train, img_data_train.shape[0]//batch_size, axis=0)
+        label_batches = np.split(lbl_data_train, lbl_data_train.shape[0]//batch_size, axis=0)
 
         for b in range(img_data_train.shape[0]):
             x = img_data_train[b].flatten()
