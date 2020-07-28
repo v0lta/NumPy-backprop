@@ -1,5 +1,6 @@
 # a numpy only le net implementation
 # based on http://yann.lecun.com/exdb/publis/pdf/lecun-98.pdf
+# and https://github.com/mnielsen/neural-networks-and-deep-learning/blob/master/src/network2.py
 
 import struct
 import numpy as np
@@ -56,8 +57,9 @@ class MSELoss(object):
 class DenseLayer(object):
     def __init__(self, in_shape, out_shape):
         self.weight = np.zeros([1, out_shape, in_shape])
-        self.weight += np.random.normal(size=[1, out_shape, in_shape])*0.01
-        # self.weight = self.weight/np.linalg.norm(self.weight)
+        self.weight = self.weight + np.random.randn(1, out_shape, in_shape)
+        self.weight = self.weight / np.sqrt(in_shape)
+        self.bias = np.random.randn(1, out_shape, 1)
         
     def forward(self, inputs):
         return np.matmul(self.weight, inputs)
