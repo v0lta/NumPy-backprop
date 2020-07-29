@@ -40,18 +40,24 @@ for i in range(iterations):
     x = np.expand_dims(np.stack(x_lst, axis=0), axis=-1)
     y = np.expand_dims(np.stack(y_lst, axis=0), axis=-1)
 
+    # forward
     h = dense.forward(x)
     h_nl = act.forward(h)
     # h_nl = h
     y_hat = dense2.forward(h_nl)
     loss = mse.forward(y, y_hat)
 
+    # backward
     dl = mse.backward(y, y_hat)
-    dw2, dx2 = dense2.backward(inputs=h_nl, prev_grad=dl)
+    dw2, dx2, db2 = dense2.backward(inputs=h_nl, prev_grad=dl)
     dx2 = act.backward(inputs=h, prev_dev=dx2)
-    dw, dx = dense.backward(inputs=x, prev_grad=dx2)
+    dw, dx, db = dense.backward(inputs=x, prev_grad=dx2)
+
+    # update
     dense.weight += -lr*np.mean(dw, axis=0)
+    dense.bias += -lr*np.mean(db, axis=0)
     dense2.weight += -lr*np.mean(dw2, axis=0)
+    dense2.bias += -lr*np.mean(db2, axis=0)
     if i % 100 == 0:
         print(i, loss)
 
@@ -64,3 +70,5 @@ plt.plot(np.squeeze(x), np.squeeze(y))
 plt.plot(np.squeeze(x), np.squeeze(dense2.forward(act.forward(dense.forward(x)))))
 plt.title('opt')
 plt.show()
+
+print('done')

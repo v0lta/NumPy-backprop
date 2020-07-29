@@ -60,14 +60,15 @@ class DenseLayer(object):
         self.weight = self.weight + np.random.randn(1, out_shape, in_shape)
         self.weight = self.weight / np.sqrt(in_shape)
         self.bias = np.random.randn(1, out_shape, 1)
-        
+
     def forward(self, inputs):
-        return np.matmul(self.weight, inputs)
+        return np.matmul(self.weight, inputs) + self.bias
 
     def backward(self, inputs, prev_grad):
         dw = np.matmul(prev_grad, np.transpose(inputs, [0, 2, 1]))
         dx = np.matmul(np.transpose(self.weight, [0, 2, 1]), prev_grad)
-        return dw, dx
+        db = 1*prev_grad
+        return dw, dx, db
 
 
 class ReLu(object):
@@ -76,7 +77,7 @@ class ReLu(object):
         inputs[inputs <= 0] = 0
         return inputs
 
-    def backward(self, prev_dev):
+    def backward(self, inputs, prev_dev):
         prev_dev[prev_dev <= 0] = 0
         return prev_dev
 
@@ -91,7 +92,6 @@ class Sigmoid(object):
     
     def backward(self, inputs, prev_dev):
         return self.sigmoid(inputs)*(1 - self.sigmoid(inputs))*prev_dev
-
 
 
 class ConvLayer(object):
