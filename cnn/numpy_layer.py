@@ -8,9 +8,11 @@ import skimage.util
 import matplotlib.pyplot as plt
 
 
-def normalize(data):
-    mean = np.mean(data)
-    std = np.std(data)
+def normalize(data, mean=None, std=None):
+    if mean is None:
+        mean = np.mean(data)
+    if std is None:
+        std = np.std(data)
     return (data-mean)/std, mean, std
 
 

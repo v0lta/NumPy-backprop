@@ -123,7 +123,7 @@ plt.show()
 
 
 img_data_test, lbl_data_test = get_test_data()
-img_data_test, mean, std = normalize(img_data_test)
+img_data_test, mean, std = normalize(img_data_test, mean=mean, std=std)
 img_batches = np.split(img_data_test,
                        img_data_test.shape[0]//batch_size,
                        axis=0)
