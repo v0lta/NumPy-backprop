@@ -65,8 +65,8 @@ class DenseLayer(object):
         return np.matmul(self.weight, inputs) + self.bias
 
     def backward(self, inputs, prev_grad):
-        dw = np.matmul(prev_grad, np.transpose(inputs, [0, 2, 1]))
         dx = np.matmul(np.transpose(self.weight, [0, 2, 1]), prev_grad)
+        dw = np.matmul(prev_grad, np.transpose(inputs, [0, 2, 1]))
         db = 1*prev_grad
         return dw, dx, db
 
@@ -106,7 +106,7 @@ class ConvLayer(object):
                                            height, width)
         
         self._stride = stride
-        self._bias = np.random.randn(1, out_channels, 1)
+        self._bias = np.random.randn(1, out_channels, 1, 1)
 
     def convolution(self, img, kernel, stride):
         kernel_shape = kernel.shape
@@ -121,6 +121,7 @@ class ConvLayer(object):
         mul_conv = np.matmul(patches, kernel)
         return mul_conv
 
+    # TODO: Add padding!
     def batched_convolution(
             self, img: np.array, kernel: np.array,
             stride: int) -> np.array:
@@ -162,21 +163,24 @@ class ConvLayer(object):
         #         img[b], self._kernel, self._stride))
         # res_for = np.stack(conv_lst, axis=0)
         res = self.batched_convolution(img, self._kernel, self._stride)
-        res += self.bias
+        res += self._bias
         return res
 
     def backward(self, inputs, prev_grad):
         # todo replace matmul with conv?
         # dw = np.matmul(prev_grad, np.transpose(inputs, [0, 2, 1]))
         # dx = np.matmul(np.transpose(self.weight, [0, 2, 1]), prev_grad)
+        dx = self.batched_convolution(
+            img=prev_grad,
+            kernel=np.flip(np.flip(self._kernel, -1), -2),
+            stride=self._stride)
         dw = self.batched_convolution(
-            prev_grad, np.transpose(inputs, [0, 2, 1]),
-            self._stride)
-        dx = self.batched_convolution(prev_grad,
-                                      np.flit(np.flip(self.weight, -1), -1),
-                                      self._stride)
+             img=np.transpose(inputs, [1, 0, 2, 3]),
+             kernel=np.transpose(prev_grad, [1, 0, 2, 3]),
+             stride=self._stride)
+
         db = 1*prev_grad
-        return dw, dx, db
+        return dx, dw, db
 
 
 def test_patch():
