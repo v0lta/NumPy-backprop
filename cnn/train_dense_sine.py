@@ -15,16 +15,17 @@ lr = 0.001
 # plt.plot(x, y)
 plt.show()
 
-dense = DenseLayer(100, 100)
+dense = DenseLayer(100, 150)
 act = Sigmoid()
-dense2 = DenseLayer(100, 100)
+dense2 = DenseLayer(150, 100)
 mse = MSELoss()
 batch_size = 5
-iterations = 50000//batch_size
+iterations = 10000//batch_size
 
 
 plt.plot(np.squeeze(x), np.squeeze(y))
-plt.plot(np.squeeze(x), np.squeeze(dense.forward(x)))
+plt.plot(np.squeeze(x),
+         np.squeeze(dense2.forward(act.forward(dense.forward(x)))))
 plt.title('init')
 plt.show()
 

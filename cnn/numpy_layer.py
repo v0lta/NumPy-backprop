@@ -100,13 +100,17 @@ class ConvLayer(object):
                  height=None, width=None, stride=1,
                  kernel=None, bias=None):
         if kernel is not None:
-            self._kernel = kernel
+            self.kernel = kernel
         else:
-            self._kernel = np.random.randn(out_channels, in_channels,
-                                           height, width)
-        
+            self.kernel = np.random.randn(out_channels, in_channels,
+                                          height, width)
+            self.kernel = self.kernel/np.sqrt(in_channels)
+ 
         self._stride = stride
-        self._bias = np.random.randn(1, out_channels, 1, 1)
+        if bias is not None:
+            self.bias = bias
+        else:
+            self.bias = np.random.randn(1, out_channels, 1, 1)/10.
 
     def convolution(self, img, kernel, stride):
         kernel_shape = kernel.shape
@@ -121,38 +125,59 @@ class ConvLayer(object):
         mul_conv = np.matmul(patches, kernel)
         return mul_conv
 
-    # TODO: Add padding!
     def batched_convolution(
             self, img: np.array, kernel: np.array,
-            stride: int) -> np.array:
+            stride: int, pad: tuple = (0, 0),
+            transpose=False) -> np.array:
         """Compute a batched convolution.
         Args:
             img (np.array): The input 'image' [batch, channel, height, weight]
             kernel (np.array): The convolution kernel [out, in, height, width]
             stride (int): The step size for the convolution.
+            pad: (tuple): The number of zeros added to the left and right 
+                              of the input sequence.
         Returns:
             np.array: The resulting output array with the convolution result.
         """
         kernel_shape = kernel.shape
-        kernel = np.reshape(kernel, [kernel_shape[0], kernel_shape[1], -1])
-        kernel = np.expand_dims(np.expand_dims(kernel, -1), 0)
-        patches = skimage.util.view_as_windows(
-            img, window_shape=[1, 1] + list(kernel_shape[-2:]), step=stride)
+        if pad != (0, 0,):
+            img = np.pad(img, ((0, 0), (0, 0),
+                               (pad[0], pad[0]),
+                               (pad[1], pad[1])))
+
+        window_shape = len(kernel_shape[:-2])*[1] + list(kernel_shape[-2:])
+        patches = skimage.util.view_as_windows(img, window_shape=window_shape,
+                                               step=stride)
         # test = skimage.util.view_as_windows(img[0],
         # window_shape=kernel_shape, step=stride)
         patches = np.squeeze(patches, axis=(4, 5))
+        # create output dimension in patches.
         patches = np.expand_dims(patches, 1)
         patches_shape = patches.shape
+        # reshape into:
+        # [batch, out, channels, img_width*img_height, ker_width*ker_height]
         patches = np.reshape(patches,
-                             list(patches_shape[:3])
-                             + [patches_shape[3]*patches_shape[4]]
-                             + [patches_shape[5]*patches_shape[6]])
-        mul_conv = np.matmul(patches, kernel)
-        mul_conv = np.squeeze(mul_conv, -1)
-        mul_conv = np.sum(mul_conv, axis=2)
-        mul_conv = np.reshape(mul_conv,
-                              [patches_shape[0], -1,
-                               patches_shape[3], patches_shape[4]])
+                             list(patches_shape[:-4])
+                             + [patches_shape[-4]*patches_shape[-3]]
+                             + [patches_shape[-2]*patches_shape[-1]])
+
+        kernel = np.reshape(kernel, [kernel_shape[0], kernel_shape[1], -1])
+        if transpose:
+            # [batch, out, channels,
+            #  img_width*img_height, ker_width*ker_height]
+            patches = np.transpose(patches, [0, 1, 2, 3, 4])
+            kernel = np.expand_dims(np.expand_dims(kernel, -1), 2)
+            mul_conv = np.matmul(patches, kernel)
+            mul_conv = np.mean(mul_conv, axis=0)
+        else:
+            kernel = np.expand_dims(np.expand_dims(kernel, -1), 0)
+            mul_conv = np.matmul(patches, kernel)
+            mul_conv = np.squeeze(mul_conv, -1)
+            # sum over the input channel dimension.
+            mul_conv = np.sum(mul_conv, axis=2)
+            mul_conv = np.reshape(mul_conv,
+                                  [patches_shape[0], -1,
+                                   patches_shape[3], patches_shape[4]])
         return mul_conv
 
     def forward(self, img):
@@ -160,27 +185,41 @@ class ConvLayer(object):
         # conv_lst = []
         # for b in range(batch_size):
         #     conv_lst.append(self.convolution(
-        #         img[b], self._kernel, self._stride))
+        #         img[b], self.kernel, self._stride))
         # res_for = np.stack(conv_lst, axis=0)
-        res = self.batched_convolution(img, self._kernel, self._stride)
-        res += self._bias
+        res = self.batched_convolution(img, self.kernel, self._stride)
+        res += self.bias
         return res
 
     def backward(self, inputs, prev_grad):
         # todo replace matmul with conv?
-        # dw = np.matmul(prev_grad, np.transpose(inputs, [0, 2, 1]))
         # dx = np.matmul(np.transpose(self.weight, [0, 2, 1]), prev_grad)
+        # dw = np.matmul(prev_grad, np.transpose(inputs, [0, 2, 1]))
+        t_pad_w = self.kernel.shape[-1] - 1
+        t_pad_h = self.kernel.shape[-2] - 1
+        flip_kernel = np.flip(np.flip(self.kernel, 2), 3)
+        transpose_kernel = np.transpose(flip_kernel, [1, 0, 2, 3])
         dx = self.batched_convolution(
-            img=prev_grad,
-            kernel=np.flip(np.flip(self._kernel, -1), -2),
-            stride=self._stride)
-        dw = self.batched_convolution(
-             img=np.transpose(inputs, [1, 0, 2, 3]),
-             kernel=np.transpose(prev_grad, [1, 0, 2, 3]),
-             stride=self._stride)
+            prev_grad,
+            kernel=transpose_kernel,
+            stride=1,
+            pad=(t_pad_w, t_pad_h))
 
+        # dense_dx = np.matmul(np.transpose(np.squeeze(flip_kernel, -1)),
+        #                      np.squeeze(prev_grad, -1))
+        # print('test dx', np.sum(np.abs(dense_dx - np.squeeze(dx))))
+        dk = self.batched_convolution(
+             inputs,            # b, c, h, w
+             kernel=prev_grad,  # out, in, h, w
+             stride=self._stride,
+             transpose=True)
+
+        # dense_dk = np.matmul(np.squeeze(prev_grad, -1),
+        #                      np.transpose(np.squeeze(inputs, -1), [0, 2, 1]))
+        # print('test dk', np.sum(np.abs(np.squeeze(np.mean(dense_dk, 0))
+        #                                - np.squeeze(dk))))
         db = 1*prev_grad
-        return dx, dw, db
+        return dx, dk, db
 
 
 def test_patch():
@@ -200,31 +239,21 @@ def test_conv():
     kernel1 = np.array([[0, 0, 0],
                        [0, 1, 0],
                        [0, 0, 0]])
-    convlayer = ConvLayer(
-        kernel=np.expand_dims(np.expand_dims(kernel1, 0), 0), stride=1)
-    conv1 = convlayer.convolution(kernel=kernel1, img=img_data_train[0, :, :],
-                                  stride=1)
-    plt.imshow(conv1.reshape(26, 26))
-    plt.title('conv_result '+str(lbl_data_train[0]))
-    plt.show()
-
     kernel2 = np.array([[1./9., 1./9., 1./9.],
                        [1./9., 1./9., 1./9.],
                        [1./9., 1./9., 1./9.]])
-    convlayer = ConvLayer(kernel=kernel2, stride=1)
-    conv2 = convlayer.convolution(kernel=kernel2, img=img_data_train[0, :, :],
-                                  stride=1)
-    plt.imshow(conv2.reshape(26, 26))
-    plt.title('mean_conv_result' + str(lbl_data_train[0]))
-    plt.show()
+    bias = np.expand_dims(np.expand_dims(np.expand_dims(
+        np.zeros([1]), -1), -1), -1)
 
     convlayer = ConvLayer(
-        kernel=np.expand_dims(np.stack([kernel1, kernel2], 0), 1), stride=1)
+        kernel=np.expand_dims(np.stack([kernel1, kernel2], 0), 1), stride=1,
+        bias=bias)
 
     res = convlayer.forward(np.expand_dims(img_data_train[:50, :, :], 1))
-    err1 = np.sum(np.abs(res[0, 0, :, :] - conv1.reshape(26, 26)))
-    err2 = np.sum(np.abs(res[0, 1, :, :] - conv2.reshape(26, 26)))
-    print('errs', err1, err2)
+    plt.imshow(res[0, 0, :, :])
+    plt.show()
+    plt.imshow(res[0, 1, :, :])
+    plt.show()
 
 
 def get_train_data():
