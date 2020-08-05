@@ -42,10 +42,10 @@ if __name__ == '__main__':
 
     lr = 0.001
     batch_size = 100
-    dense = ConvLayer(in_channels=1, out_channels=64,
+    dense = ConvLayer(in_channels=1, out_channels=128,
                       height=4, width=4, stride=2, padding=0)
     act1 = Sigmoid()
-    dense2 = ConvLayer(in_channels=64, out_channels=256,
+    dense2 = ConvLayer(in_channels=128, out_channels=256,
                        height=3, width=3, stride=2)
     act2 = Sigmoid()
     dense3 = ConvLayer(in_channels=256, out_channels=10,
@@ -102,11 +102,14 @@ if __name__ == '__main__':
 
             # update
             dense.kernel += -lr*dk
-            dense.bias += -lr*np.expand_dims(np.mean(db, axis=(0, 2, 3)), (0, 2, 3))
+            dense.bias += -lr*np.expand_dims(np.mean(db, axis=(0, 2, 3)),
+                                             (0, 2, 3))
             dense2.kernel += -lr*dk2
-            dense2.bias += -lr*np.expand_dims(np.mean(db2, axis=(0, 2, 3)), (0, 2, 3))
+            dense2.bias += -lr*np.expand_dims(np.mean(db2, axis=(0, 2, 3)),
+                                              (0, 2, 3))
             dense3.kernel += -lr*dk3
-            dense3.bias += -lr*np.expand_dims(np.mean(db3, axis=(0, 2, 3)), (0, 2, 3))
+            dense3.bias += -lr*np.expand_dims(np.mean(db3, axis=(0, 2, 3)),
+                                              (0, 2, 3))
             loss_lst.append(loss)
 
             true = np.sum((labels == np.squeeze(np.argmax(y_hat, axis=1))
@@ -119,7 +122,7 @@ if __name__ == '__main__':
         if e % 1 == 0:
             lr = lr / 2
 
-plt.plot(loss_lst)
+plt.semilogy(loss_lst)
 plt.show()
 plt.plot(acc_lst)
 plt.show()
@@ -136,8 +139,8 @@ label_batches = np.split(lbl_data_test,
 true_count = 0
 total_count = 0
 for no, img_batch in enumerate(img_batches):
-    img_batch = np.reshape(img_batch, [img_batch.shape[0], -1])
-    img_batch = np.expand_dims(img_batch, -1)
+    # img_batch = np.reshape(img_batch, [img_batch.shape[0], -1])
+    img_batch = np.expand_dims(img_batch, 1)
     labels = label_batches[no]
 
     for b in range(batch_size):

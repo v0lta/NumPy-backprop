@@ -1,5 +1,5 @@
 # found in https://github.com/cs231n/cs231n.github.io
-# cs231n.github.io/assignments/2015/ assigment 2 zip.
+# cs231n.github.io/assignments/2015/ assignment 2 zip.
 import numpy as np
 
 
@@ -27,7 +27,8 @@ def get_im2col_indices(x_shape, field_height,
 
 def im2col_indices(x, field_height, field_width, padding=1, stride=1):
     """ Transform in image input x into a column for multiplication
-        with a flattened kernel.
+        with a flattened kernel of shape [out, in_channel*field_height
+        *field_width].
     Args:
         x ([np.array]): The input image array [batch, channels, height, width]
         field_height (int): Kernel height
@@ -38,8 +39,8 @@ def im2col_indices(x, field_height, field_width, padding=1, stride=1):
         stride (int, optional): The step size along the hight and width
                                 dimension. Defaults to 1.
     Returns:
-        [np.array]: The image [field_height*field_width, -1] as columns
-                    for multiplication with a flat kernel.
+        [np.array]: The image [field_height*field_width*channels, -1]
+                    as columns for multiplication with a flat kernel.
     """
     # Zero-pad the input
     p = padding
@@ -56,7 +57,8 @@ def im2col_indices(x, field_height, field_width, padding=1, stride=1):
 
 def col2im_indices(cols, x_shape, field_height=3, field_width=3, padding=1,
                    stride=1):
-    """ An implementation of col2im based on fancy indexing and np.add.at """
+    """ An implementation of col2im based on fancy indexing and np.add.at
+        the inverse operation of im2col. """
     N, C, H, W = x_shape
     H_padded, W_padded = H + 2 * padding, W + 2 * padding
     x_padded = np.zeros((N, C, H_padded, W_padded), dtype=cols.dtype)
