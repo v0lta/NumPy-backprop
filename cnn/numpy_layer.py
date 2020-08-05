@@ -81,7 +81,7 @@ class Sigmoid(object):
 class ConvLayer(object):
 
     def __init__(self, in_channels=None, out_channels=None,
-                 height=None, width=None, stride=1,
+                 height=None, width=None, stride=1, padding=0,
                  kernel=None, bias=None):
         if kernel is not None:
             self.kernel = kernel
@@ -91,11 +91,11 @@ class ConvLayer(object):
             self.kernel = self.kernel/np.sqrt(in_channels)
  
         self._stride = stride
-        self._padding = 0
+        self._padding = padding
         if bias is not None:
             self.bias = bias
         else:
-            self.bias = np.random.randn(1, out_channels, 1, 1)/10.
+            self.bias = np.random.randn(1, out_channels, 1, 1)
 
     def convolution(self, img, kernel, stride):
         kernel_shape = kernel.shape
@@ -148,13 +148,12 @@ class ConvLayer(object):
         input_cols = im2col_indices(inputs,
                                     kernel_shape[-2], kernel_shape[-1],
                                     padding=self._padding, stride=self._stride)
-        grad_cols = im2col_indices(prev_grad,
-                                   kernel_shape[-2], kernel_shape[-1],
-                                   padding=self._padding, stride=self._stride)
-        dx = np.matmul(kernel_flat.T, grad_cols)
+        grad_cols = np.transpose(prev_grad, [1, 2, 3, 0])
+        grad_cols = np.reshape(grad_cols, [kernel_shape[0], -1])
         dk = np.matmul(grad_cols, input_cols.T)
         dk = np.reshape(dk, self.kernel.shape)
         db = 1*prev_grad
+        dx = np.matmul(kernel_flat.T, grad_cols)
         dx_shape = [img_shape[0], img_shape[1],
                     img_shape[-2], img_shape[-1]]
         dx = col2im_indices(dx, dx_shape,
