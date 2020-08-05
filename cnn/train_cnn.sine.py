@@ -10,7 +10,7 @@ x = np.linspace(0, 10, num=100)
 y = np.sin(x) + np.random.uniform(-0.1, 0.1, size=(100))
 x = np.expand_dims(np.expand_dims(x, -1), 0)
 y = np.expand_dims(np.expand_dims(y, -1), 0)
-lr = 0.0001
+lr = 0.001
 
 # plt.plot(x, y)
 plt.show()
