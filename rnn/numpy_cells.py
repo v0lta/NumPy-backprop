@@ -37,7 +37,7 @@ class BasicCell(object):
         # hidden bias
         self.bh = np.zeros((1, hidden_size, 1))
         # output bias
-        self.by = np.zeros((1, output_size, 1))
+        self.by = np.random.randn(1, output_size, 1)*0.1
         self.activation = activation
 
     def zero_state(self, batch_size):

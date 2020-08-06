@@ -10,7 +10,7 @@ if __name__ == '__main__':
     baseline = 0.167
     time_steps = 5
     batch_size = 50
-    lr = .1
+    lr = .05
     cell = BasicCell(hidden_size=250, input_size=2)
     cost = MSELoss()
 
@@ -48,7 +48,7 @@ if __name__ == '__main__':
         for t in reversed(range(time_steps)):
             deltah, dWhh, dWxh, dbh, dWhy, dby = \
                 cell.backward(deltay=deltay, deltah=deltah,
-                              x=x[t, :, :, :], h=h, y=out_lst[t])
+                              x=x[t, :, :, :], h=h_lst[t], y=out_lst[t])
             grad_lst.append([dWhh, dWxh, dbh, dWhy, dby])
         ldWhh, ldWxh, ldbh, ldWhy, ldby = zip(*grad_lst)
         dWhh = np.stack(ldWhh)
