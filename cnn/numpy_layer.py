@@ -26,10 +26,7 @@ class CrossEntropyCost(object):
 
 
 class MSELoss(object):
-    '''
-    The cross-entropy loss of the predictions
-    '''
-
+    ''' Mean squared error loss function. '''
     def forward(self, label, out):
         diff = out - label
         return np.mean(0.5*diff*diff)
