@@ -29,15 +29,18 @@ class BasicCell(object):
                  activation=Tanh()):
         self.hidden_size = hidden_size
         # input to hidden
-        self.Wxh = np.random.randn(1, hidden_size, input_size)*0.01
+        self.Wxh = np.random.randn(1, hidden_size, input_size)
+        self.Wxh = self.Wxh / np.sqrt(hidden_size)
         # hidden to hidden
-        self.Whh = np.random.randn(1, hidden_size, hidden_size)*0.01
+        self.Whh = np.random.randn(1, hidden_size, hidden_size)
+        self.Whh = self.Whh / np.sqrt(hidden_size)
         # hidden to output
-        self.Why = np.random.randn(1, output_size, hidden_size)*0.01
+        self.Why = np.random.randn(1, output_size, hidden_size)
+        self.Why = self.Why / np.sqrt(hidden_size)
         # hidden bias
         self.bh = np.zeros((1, hidden_size, 1))
         # output bias
-        self.by = np.random.randn(1, output_size, 1)*0.1
+        self.by = np.random.randn(1, output_size, 1)
         self.activation = activation
 
     def zero_state(self, batch_size):
@@ -49,7 +52,7 @@ class BasicCell(object):
         y = np.matmul(self.Why, h) + self.by
         return y, h
 
-    def backward(self, deltay, deltah, x, h, y):
+    def backward(self, deltay, deltah, x, h, hm1, y):
         # output backprop
         dydh = np.matmul(np.transpose(self.Why, [0, 2, 1]), deltay)
         dWhy = np.matmul(deltay, np.transpose(h, [0, 2, 1]))
@@ -57,12 +60,12 @@ class BasicCell(object):
 
         delta = self.activation.backward(inputs=h, delta=dydh) + deltah
         # recurrent backprop
-        dhdh = np.matmul(np.transpose(self.Whh, [0, 2, 1]), delta)
         dWxh = np.matmul(delta, np.transpose(x, [0, 2, 1]))
-        dWhh = np.matmul(delta, np.transpose(h, [0, 2, 1]))
+        dWhh = np.matmul(delta, np.transpose(hm1, [0, 2, 1]))
         dbh = 1*delta
+        deltah = np.matmul(np.transpose(self.Whh, [0, 2, 1]), delta)
         # deltah, dWhh, dWxh, dbh, dWhy, dby
-        return dhdh, dWhh, dWxh, dbh, dWhy, dby
+        return deltah, dWhh, dWxh, dbh, dWhy, dby
 
 
 class LSTMcell(object):

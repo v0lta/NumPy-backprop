@@ -8,10 +8,10 @@ if __name__ == '__main__':
     n_train = int(9e5)
     n_test = int(1e4)
     baseline = 0.167
-    time_steps = 5
-    batch_size = 50
-    lr = .05
-    cell = BasicCell(hidden_size=250, input_size=2)
+    time_steps = 8
+    batch_size = 100
+    lr = 0.0001
+    cell = BasicCell(hidden_size=150, input_size=2)
     cost = MSELoss()
 
     train_x, train_y = generate_data_adding(time_steps, n_train)
@@ -40,36 +40,42 @@ if __name__ == '__main__':
             out_lst.append(out)
             h_lst.append(h)
         loss = cost.forward(y, out_lst[-1])
-        deltay = cost.backward(y, out_lst[-1])
+        deltay = np.zeros((time_steps, batch_size, 1, 1))
+        deltay[-1, :, :, :] = cost.backward(y, out_lst[-1])
         deltah = cell.zero_state(batch_size)
 
         grad_lst = []
         # backward
         for t in reversed(range(time_steps)):
             deltah, dWhh, dWxh, dbh, dWhy, dby = \
-                cell.backward(deltay=deltay, deltah=deltah,
-                              x=x[t, :, :, :], h=h_lst[t], y=out_lst[t])
+                cell.backward(deltay=deltay[t, :, :, :],
+                              deltah=deltah,
+                              x=x[t, :, :, :],
+                              h=h_lst[t],
+                              hm1=h_lst[t-1],
+                              y=out_lst[t])
             grad_lst.append([dWhh, dWxh, dbh, dWhy, dby])
         ldWhh, ldWxh, ldbh, ldWhy, ldby = zip(*grad_lst)
-        dWhh = np.stack(ldWhh)
-        dWxh = np.stack(ldWxh)
-        dbh = np.stack(ldbh)
-        dWhy = np.stack(ldWhy)
-        dby = np.stack(ldby)
+        dWhh = np.stack(ldWhh, axis=0)
+        dWxh = np.stack(ldWxh, axis=0)
+        dbh = np.stack(ldbh, axis=0)
+        dWhy = np.stack(ldWhy, axis=0)
+        dby = np.stack(ldby, axis=0)
         # backprop in time requires us to sum the gradients at each
         # point in time.
 
         # update
-        cell.Whh = -lr*np.expand_dims(np.mean(np.sum(dWhh, axis=0), axis=0), 0)
-        cell.Wxh = -lr*np.expand_dims(np.mean(np.sum(dWxh, axis=0), axis=0), 0)
-        cell.bh = -lr*np.expand_dims(np.mean(np.sum(dbh, axis=0), axis=0), 0)
-        cell.Why = -lr*np.expand_dims(np.mean(np.sum(dWhy, axis=0), axis=0), 0)
-        cell.by = -lr*np.expand_dims(np.mean(np.sum(dby, axis=0), axis=0), 0)
+        cell.Whh += -lr*np.expand_dims(np.mean(np.sum(dWhh, axis=0), axis=0), 0)
+        cell.Wxh += -lr*np.expand_dims(np.mean(np.sum(dWxh, axis=0), axis=0), 0)
+        cell.bh += -lr*np.expand_dims(np.mean(np.sum(dbh, axis=0), axis=0), 0)
+        cell.Why += -lr*np.expand_dims(np.mean(np.sum(dWhy, axis=0), axis=0), 0)
+        cell.by += -lr*np.expand_dims(np.mean(np.sum(dby, axis=0), axis=0), 0)
 
         if i % 5 == 0:
             print(i, loss, baseline)
         loss_lst.append(loss)
 
+    # learning unstable fix gradients!
     plt.semilogy(loss_lst)
     plt.show()
 
