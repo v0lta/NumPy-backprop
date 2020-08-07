@@ -9,9 +9,9 @@ if __name__ == '__main__':
     n_test = int(1e4)
     baseline = 0.167
     time_steps = 8
-    batch_size = 100
-    lr = 0.0001
-    cell = BasicCell(hidden_size=150, input_size=2)
+    batch_size = 50
+    lr = 0.01
+    cell = BasicCell(hidden_size=250, input_size=2)
     cost = MSELoss()
 
     train_x, train_y = generate_data_adding(time_steps, n_train)
@@ -72,8 +72,11 @@ if __name__ == '__main__':
         cell.by += -lr*np.expand_dims(np.mean(np.sum(dby, axis=0), axis=0), 0)
 
         if i % 5 == 0:
-            print(i, loss, baseline)
+            print(i, 'loss', loss, 'baseline', baseline, 'lr', lr)
         loss_lst.append(loss)
+
+        if i % 100 == 0 and i > 0:
+            lr = lr * 0.9
 
     # learning unstable fix gradients!
     plt.semilogy(loss_lst)
