@@ -8,10 +8,10 @@ if __name__ == '__main__':
     n_train = int(9e5)
     n_test = int(1e4)
     baseline = 0.167
-    time_steps = 8
-    batch_size = 50
-    lr = 0.01
-    cell = BasicCell(hidden_size=250, input_size=2)
+    time_steps = 6
+    batch_size = 25
+    lr = 0.1
+    cell = BasicCell(hidden_size=56, input_size=2)
     cost = MSELoss()
 
     train_x, train_y = generate_data_adding(time_steps, n_train)
@@ -71,14 +71,15 @@ if __name__ == '__main__':
         cell.Why += -lr*np.expand_dims(np.mean(np.sum(dWhy, axis=0), 0), 0)
         cell.by += -lr*np.expand_dims(np.mean(np.sum(dby, axis=0), 0), 0)
 
-        if i % 5 == 0:
+        if i % 10 == 0:
             print(i, 'loss', loss, 'baseline', baseline, 'lr', lr)
         loss_lst.append(loss)
 
         if i % 1000 == 0 and i > 0:
-            lr = lr * 0.9
+            lr = lr * 0.95
 
-    # learning unstable fix gradients!
+    print(y[:, 0, 0])
+    print(out[:, 0, 0])
     plt.semilogy(loss_lst)
     plt.show()
 

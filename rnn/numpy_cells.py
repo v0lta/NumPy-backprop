@@ -22,6 +22,19 @@ class Tanh(object):
         return (1. - np.tanh(inputs)*np.tanh(inputs))*delta
 
 
+
+class Sigmoid(object):
+
+    def sigmoid(self, inputs):
+        return np.exp(inputs)/(1 + np.exp(inputs))
+
+    def forward(self, inputs):
+        return self.sigmoid(inputs)
+
+    def backward(self, inputs, delta):
+        return self.sigmoid(inputs)*(1 - self.sigmoid(inputs))*delta
+
+
 class BasicCell(object):
     """Basic (Elman) rnn cell."""
 
@@ -40,7 +53,7 @@ class BasicCell(object):
         # hidden bias
         self.bh = np.zeros((1, hidden_size, 1))
         # output bias
-        self.by = np.random.randn(1, output_size, 1)
+        self.by = np.random.randn(1, output_size, 1)*0.01
         self.activation = activation
 
     def zero_state(self, batch_size):
@@ -92,7 +105,8 @@ class LSTMcell(object):
         self.pi = np.random.randn(1, hidden_size, 1)*s
         self.pf = np.random.randn(1, hidden_size, 1)*s
         self.po = np.random.randn(1, hidden_size, 1)*s
-
+        
+        self.activation = Tanh()
 
     def forward(self, x, h):
         pass
