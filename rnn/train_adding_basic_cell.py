@@ -65,17 +65,17 @@ if __name__ == '__main__':
         # point in time.
 
         # update
-        cell.Whh += -lr*np.expand_dims(np.mean(np.sum(dWhh, axis=0), axis=0), 0)
-        cell.Wxh += -lr*np.expand_dims(np.mean(np.sum(dWxh, axis=0), axis=0), 0)
-        cell.bh += -lr*np.expand_dims(np.mean(np.sum(dbh, axis=0), axis=0), 0)
-        cell.Why += -lr*np.expand_dims(np.mean(np.sum(dWhy, axis=0), axis=0), 0)
-        cell.by += -lr*np.expand_dims(np.mean(np.sum(dby, axis=0), axis=0), 0)
+        cell.Whh += -lr*np.expand_dims(np.mean(np.sum(dWhh, axis=0), 0), 0)
+        cell.Wxh += -lr*np.expand_dims(np.mean(np.sum(dWxh, axis=0), 0), 0)
+        cell.bh += -lr*np.expand_dims(np.mean(np.sum(dbh, axis=0), 0), 0)
+        cell.Why += -lr*np.expand_dims(np.mean(np.sum(dWhy, axis=0), 0), 0)
+        cell.by += -lr*np.expand_dims(np.mean(np.sum(dby, axis=0), 0), 0)
 
         if i % 5 == 0:
             print(i, 'loss', loss, 'baseline', baseline, 'lr', lr)
         loss_lst.append(loss)
 
-        if i % 100 == 0 and i > 0:
+        if i % 1000 == 0 and i > 0:
             lr = lr * 0.9
 
     # learning unstable fix gradients!

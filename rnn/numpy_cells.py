@@ -69,8 +69,30 @@ class BasicCell(object):
 
 
 class LSTMcell(object):
-    def __init__(self):
-        pass
+    def __init__(self, hidden_size=250,
+                 input_size=1, output_size=1):
+        self.hidden_size = hidden_size
+        # create the weights
+        s = np.sqrt(hidden_size)
+        self.Wz = np.random.randn(1, hidden_size, input_size)*s
+        self.Wi = np.random.randn(1, hidden_size, input_size)*s
+        self.Wf = np.random.randn(1, hidden_size, input_size)*s
+        self.Wo = np.random.randn(1, hidden_size, input_size)*s
 
-    def forward(self):
+        self.Rz = np.random.randn(1, hidden_size, hidden_size)*s
+        self.Ri = np.random.randn(1, hidden_size, hidden_size)*s
+        self.Rf = np.random.randn(1, hidden_size, hidden_size)*s
+        self.Ro = np.random.randn(1, hidden_size, hidden_size)*s
+
+        self.bz = np.random.randn(1, hidden_size, 1)*s
+        self.bi = np.random.randn(1, hidden_size, 1)*s
+        self.bf = np.random.randn(1, hidden_size, 1)*s
+        self.bo = np.random.randn(1, hidden_size, 1)*s
+
+        self.pi = np.random.randn(1, hidden_size, 1)*s
+        self.pf = np.random.randn(1, hidden_size, 1)*s
+        self.po = np.random.randn(1, hidden_size, 1)*s
+
+
+    def forward(self, x, h):
         pass
