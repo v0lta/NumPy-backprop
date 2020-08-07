@@ -22,7 +22,6 @@ class Tanh(object):
         return (1. - np.tanh(inputs)*np.tanh(inputs))*delta
 
 
-
 class Sigmoid(object):
 
     def sigmoid(self, inputs):
@@ -105,8 +104,34 @@ class LSTMcell(object):
         self.pi = np.random.randn(1, hidden_size, 1)*s
         self.pf = np.random.randn(1, hidden_size, 1)*s
         self.po = np.random.randn(1, hidden_size, 1)*s
-        
-        self.activation = Tanh()
 
-    def forward(self, x, h):
-        pass
+        self.state_activation = Tanh()
+        self.out_activation = Tanh()
+        self.gate_i_act = Sigmoid()
+        self.gate_f_act = Sigmoid()
+        self.gate_o_act = Sigmoid()
+
+        self.Wout = np.random.randn(1, hidden_size, output_size)*s
+        self.bout = np.random.randn(1, output_size, 1)
+
+    def forward(self, x, h, c, cm1):
+        z = np.matmul(self.Wz, x) + np.matmul(self.Rz, h) + self.bz
+        z = self.state_activation(z)
+        i = np.matmul(self.Wi, x) + np.matmul(self.Ri, h) + self.pi*c + self.bi
+        i = self.gate_i_act(i)
+        f = np.matmul(self.Wf, x) + np.matmul(self.Rf, h) + self.pf*c + self.bf
+        f = self.gate_f_act(f)
+        o = np.matmul(self.Wo, x) + np.matmul(self.Ro, h) + self.po*c + self.bo
+        o = self.gate_o_act(o)
+        c = z * i + c * f
+        h = self.out_activation(c)*o
+        y = np.matmul(self.Wout, h) + self.bout
+        return c, h, y
+
+    def backward(self, x, h, c, deltay, deltac):
+        dydh = np.matmul(np.transpose(self.Wout, [0, 2, 1]), deltay)
+        dWout = np.matmul(deltay, np.transpose(h, [0, 2, 1]))
+        dbout = 1*deltay
+
+        
+        return None
