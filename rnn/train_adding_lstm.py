@@ -127,7 +127,8 @@ if __name__ == '__main__':
         cell.po += -lr*np.expand_dims(np.mean(np.sum(dpo, axis=0), 0), 0)
         
         if i % 10 == 0:
-            print(i, 'loss', "%.3f" % loss, 'baseline', baseline, 'lr', lr,
+            print(i, 'loss', "%.4f" % loss, 'baseline', baseline,
+                  'lr', "%.6f" % lr,
                   'done', "%.3f" % (i/iterations))
         loss_lst.append(loss)
 
