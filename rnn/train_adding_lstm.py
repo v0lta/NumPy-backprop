@@ -133,7 +133,7 @@ if __name__ == '__main__':
         loss_lst.append(loss)
 
         if i % 1000 == 0 and i > 0:
-            lr = lr * 0.95
+            lr = lr * 0.90
 
     print(y[:, 0, 0])
     print(out[:, 0, 0])
