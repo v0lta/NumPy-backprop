@@ -1,5 +1,6 @@
-# based on https://gist.github.com/karpathy/d4dee566867f8291f086
-# and https://github.com/wiseodd/hipsternet/blob/master/hipsternet/neuralnet.py
+# based on https://gist.github.com/karpathy/d4dee566867f8291f086,
+# https://github.com/wiseodd/hipsternet/blob/master/hipsternet/neuralnet.py
+# see also https://arxiv.org/pdf/1503.04069.pdf
 
 import numpy as np
 
@@ -115,23 +116,70 @@ class LSTMcell(object):
         self.bout = np.random.randn(1, output_size, 1)
 
     def forward(self, x, h, c, cm1):
-        z = np.matmul(self.Wz, x) + np.matmul(self.Rz, h) + self.bz
-        z = self.state_activation(z)
-        i = np.matmul(self.Wi, x) + np.matmul(self.Ri, h) + self.pi*c + self.bi
-        i = self.gate_i_act(i)
-        f = np.matmul(self.Wf, x) + np.matmul(self.Rf, h) + self.pf*c + self.bf
-        f = self.gate_f_act(f)
-        o = np.matmul(self.Wo, x) + np.matmul(self.Ro, h) + self.po*c + self.bo
-        o = self.gate_o_act(o)
+        # block input
+        zbar = np.matmul(self.Wz, x) + np.matmul(self.Rz, h) + self.bz
+        z = self.state_activation(zbar)
+        # input gate
+        ibar = np.matmul(self.Wi, x) + np.matmul(self.Ri, h) + self.pi*c \
+            + self.bi
+        i = self.gate_i_act(ibar)
+        # forget gate
+        fbar = np.matmul(self.Wf, x) + np.matmul(self.Rf, h) + self.pf*c \
+            + self.bf
+        f = self.gate_f_act(fbar)
+        # cell
         c = z * i + c * f
-        h = self.out_activation(c)*o
-        y = np.matmul(self.Wout, h) + self.bout
-        return c, h, y
+        # output gate
+        obar = np.matmul(self.Wo, x) + np.matmul(self.Ro, h) + self.po*c \
+            + self.bo
+        o = self.gate_o_act(obar)
+        # block output
+        y = self.out_activation(c)*o
+        # linear projection
+        y = np.matmul(self.Wout, y) + self.bout
+        return c, h, y, zbar, ibar, fbar, obar
 
-    def backward(self, x, h, c, deltay, deltac):
-        dydh = np.matmul(np.transpose(self.Wout, [0, 2, 1]), deltay)
+    def backward(self, x, h, zbar, ibar, fbar, obar, c, cm1,
+                 deltay, deltac, deltao, deltai, deltaf):
+        # projection backward
         dWout = np.matmul(deltay, np.transpose(h, [0, 2, 1]))
         dbout = 1*deltay
+        deltay = np.matmul(np.transpose(self.Wout, [0, 2, 1]), deltay)
 
-        
-        return None
+        # block backward
+        deltao = deltay * self.out_activation(c)\
+            * self.gate_o_act.backward(obar)
+        deltac = deltay * self.gate_o_act(obar)\
+            * self.state_activation.backward(c)\
+            + self.po*deltao \
+            + self.pi*deltai \
+            + self.pf*deltaf \
+            + deltac*self.gate_f_act(fbar)
+        deltaf = deltac * cm1 * self.gate_f_act.backward(fbar)
+        deltai = deltac * self.state_activation(zbar)
+        deltaz = deltac*self.gate_i_act(ibar)\
+            * self.state_activation.backward(zbar)
+
+        # weight backward
+        dWz = np.matmul(deltaz, np.transpose(x, [0, 2, 1]))
+        dWi = np.matmul(deltai, np.transpose(x, [0, 2, 1]))
+        dWf = np.matmul(deltaf, np.transpose(x, [0, 2, 1]))
+        dWo = np.matmul(deltao, np.transpose(x, [0, 2, 1]))
+
+        dRz = np.matmul(deltaz, np.transpose(h, [0, 2, 1]))
+        dRi = np.matmul(deltai, np.transpose(h, [0, 2, 1]))
+        dRf = np.matmul(deltaf, np.transpose(h, [0, 2, 1]))
+        dRo = np.matmul(deltao, np.transpose(h, [0, 2, 1]))
+
+        dbz = deltaz
+        dbi = deltai
+        dbf = deltaf
+        dbo = deltao
+
+        dpi = c*deltai
+        dpf = c*deltaf
+        dpo = c*deltao
+
+        return deltay, dWout, dbout, deltao, deltaf, deltai, deltaz,\
+            dWz, dWi, dWf, dWo, dRz, dRi, dRf, dRo, dbz, dbi, dbf, dbo,\
+            dpi, dpf, dpo
