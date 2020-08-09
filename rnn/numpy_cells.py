@@ -22,17 +22,24 @@ class Tanh(object):
     def backward(self, inputs, delta):
         return (1. - np.tanh(inputs)*np.tanh(inputs))*delta
 
+    def prime(self, inputs):
+        return (1. - np.tanh(inputs)*np.tanh(inputs))
+
 
 class Sigmoid(object):
 
     def sigmoid(self, inputs):
-        return np.exp(inputs)/(1 + np.exp(inputs))
+        sig = np.exp(inputs)/(1 + np.exp(inputs))
+        return np.nan_to_num(sig)
 
     def forward(self, inputs):
         return self.sigmoid(inputs)
 
     def backward(self, inputs, delta):
         return self.sigmoid(inputs)*(1 - self.sigmoid(inputs))*delta
+
+    def prime(self, inputs):
+        return self.sigmoid(inputs)*(1 - self.sigmoid(inputs))
 
 
 class BasicCell(object):
@@ -65,7 +72,7 @@ class BasicCell(object):
         y = np.matmul(self.Why, h) + self.by
         return y, h
 
-    def backward(self, deltay, deltah, x, h, hm1, y):
+    def backward(self, deltay, deltah, x, h, hm1):
         # output backprop
         dydh = np.matmul(np.transpose(self.Why, [0, 2, 1]), deltay)
         dWhy = np.matmul(deltay, np.transpose(h, [0, 2, 1]))
@@ -86,7 +93,7 @@ class LSTMcell(object):
                  input_size=1, output_size=1):
         self.hidden_size = hidden_size
         # create the weights
-        s = np.sqrt(hidden_size)
+        s = 1./np.sqrt(hidden_size)
         self.Wz = np.random.randn(1, hidden_size, input_size)*s
         self.Wi = np.random.randn(1, hidden_size, input_size)*s
         self.Wf = np.random.randn(1, hidden_size, input_size)*s
@@ -97,7 +104,7 @@ class LSTMcell(object):
         self.Rf = np.random.randn(1, hidden_size, hidden_size)*s
         self.Ro = np.random.randn(1, hidden_size, hidden_size)*s
 
-        self.bz = np.random.randn(1, hidden_size, 1)*s
+        self.bz = np.zeros((1, hidden_size, 1))*s
         self.bi = np.random.randn(1, hidden_size, 1)*s
         self.bf = np.random.randn(1, hidden_size, 1)*s
         self.bo = np.random.randn(1, hidden_size, 1)*s
@@ -112,32 +119,35 @@ class LSTMcell(object):
         self.gate_f_act = Sigmoid()
         self.gate_o_act = Sigmoid()
 
-        self.Wout = np.random.randn(1, hidden_size, output_size)*s
+        self.Wout = np.random.randn(1, output_size, hidden_size)*s
         self.bout = np.random.randn(1, output_size, 1)
 
-    def forward(self, x, h, c, cm1):
+    def zero_state(self, batch_size):
+        return np.zeros((batch_size, self.hidden_size, 1))
+
+    def forward(self, x, h, c):
         # block input
         zbar = np.matmul(self.Wz, x) + np.matmul(self.Rz, h) + self.bz
-        z = self.state_activation(zbar)
+        z = self.state_activation.forward(zbar)
         # input gate
         ibar = np.matmul(self.Wi, x) + np.matmul(self.Ri, h) + self.pi*c \
             + self.bi
-        i = self.gate_i_act(ibar)
+        i = self.gate_i_act.forward(ibar)
         # forget gate
         fbar = np.matmul(self.Wf, x) + np.matmul(self.Rf, h) + self.pf*c \
             + self.bf
-        f = self.gate_f_act(fbar)
+        f = self.gate_f_act.forward(fbar)
         # cell
         c = z * i + c * f
         # output gate
         obar = np.matmul(self.Wo, x) + np.matmul(self.Ro, h) + self.po*c \
             + self.bo
-        o = self.gate_o_act(obar)
+        o = self.gate_o_act.forward(obar)
         # block output
-        y = self.out_activation(c)*o
+        h = self.out_activation.forward(c)*o
         # linear projection
-        y = np.matmul(self.Wout, y) + self.bout
-        return c, h, y, zbar, ibar, fbar, obar
+        y = np.matmul(self.Wout, h) + self.bout
+        return y, c, h, zbar, ibar, fbar, obar
 
     def backward(self, x, h, zbar, ibar, fbar, obar, c, cm1,
                  deltay, deltac, deltao, deltai, deltaf):
@@ -147,18 +157,18 @@ class LSTMcell(object):
         deltay = np.matmul(np.transpose(self.Wout, [0, 2, 1]), deltay)
 
         # block backward
-        deltao = deltay * self.out_activation(c)\
-            * self.gate_o_act.backward(obar)
-        deltac = deltay * self.gate_o_act(obar)\
-            * self.state_activation.backward(c)\
+        deltao = deltay * self.out_activation.forward(c)\
+            * self.gate_o_act.prime(obar)
+        deltac = deltay * self.gate_o_act.forward(obar)\
+            * self.state_activation.prime(c)\
             + self.po*deltao \
             + self.pi*deltai \
             + self.pf*deltaf \
-            + deltac*self.gate_f_act(fbar)
-        deltaf = deltac * cm1 * self.gate_f_act.backward(fbar)
-        deltai = deltac * self.state_activation(zbar)
-        deltaz = deltac*self.gate_i_act(ibar)\
-            * self.state_activation.backward(zbar)
+            + deltac*self.gate_f_act.forward(fbar)
+        deltaf = deltac * cm1 * self.gate_f_act.prime(fbar)
+        deltai = deltac * self.state_activation.forward(zbar)
+        deltaz = deltac*self.gate_i_act.forward(ibar)\
+            * self.state_activation.prime(zbar)
 
         # weight backward
         dWz = np.matmul(deltaz, np.transpose(x, [0, 2, 1]))
@@ -180,6 +190,7 @@ class LSTMcell(object):
         dpf = c*deltaf
         dpo = c*deltao
 
-        return deltay, dWout, dbout, deltao, deltaf, deltai, deltaz,\
-            dWz, dWi, dWf, dWo, dRz, dRi, dRf, dRo, dbz, dbi, dbf, dbo,\
+        return deltac, deltao, deltai, deltaf, \
+            dWout, dbout, dWz, dWi, dWf, dWo, dRz, dRi,\
+            dRf, dRo, dbz, dbi, dbf, dbo,\
             dpi, dpf, dpo

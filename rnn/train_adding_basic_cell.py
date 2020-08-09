@@ -52,8 +52,7 @@ if __name__ == '__main__':
                               deltah=deltah,
                               x=x[t, :, :, :],
                               h=h_lst[t],
-                              hm1=h_lst[t-1],
-                              y=out_lst[t])
+                              hm1=h_lst[t-1])
             grad_lst.append([dWhh, dWxh, dbh, dWhy, dby])
         ldWhh, ldWxh, ldbh, ldWhy, ldby = zip(*grad_lst)
         dWhh = np.stack(ldWhh, axis=0)
@@ -72,7 +71,7 @@ if __name__ == '__main__':
         cell.by += -lr*np.expand_dims(np.mean(np.sum(dby, axis=0), 0), 0)
 
         if i % 10 == 0:
-            print(i, 'loss', loss, 'baseline', baseline, 'lr', lr)
+            print(i, 'loss', "%.3f" % loss, 'baseline', baseline, 'lr', lr)
         loss_lst.append(loss)
 
         if i % 1000 == 0 and i > 0:
