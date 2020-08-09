@@ -8,7 +8,7 @@ if __name__ == '__main__':
     n_train = int(9e5)
     n_test = int(1e4)
     baseline = 0.167
-    time_steps = 6
+    time_steps = 12
     batch_size = 25
     lr = 0.1
     cell = LSTMcell(hidden_size=56, input_size=2)
@@ -107,6 +107,9 @@ if __name__ == '__main__':
 
         # backprop in time requires us to sum the gradients at each
         # point in time.
+
+        # todo add clipping.
+
         # update
         cell.Wout += -lr*np.expand_dims(np.mean(np.sum(dWout, axis=0), 0), 0)
         cell.bout += -lr*np.expand_dims(np.mean(np.sum(dbout, axis=0), 0), 0)

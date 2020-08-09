@@ -8,7 +8,7 @@ if __name__ == '__main__':
     n_train = int(9e5)
     n_test = int(1e4)
     baseline = 0.167
-    time_steps = 6
+    time_steps = 12
     batch_size = 25
     lr = 0.1
     cell = BasicCell(hidden_size=56, input_size=2)
@@ -63,6 +63,8 @@ if __name__ == '__main__':
         # backprop in time requires us to sum the gradients at each
         # point in time.
 
+        # todo add clipping.
+
         # update
         cell.Whh += -lr*np.expand_dims(np.mean(np.sum(dWhh, axis=0), 0), 0)
         cell.Wxh += -lr*np.expand_dims(np.mean(np.sum(dWxh, axis=0), 0), 0)
@@ -71,7 +73,9 @@ if __name__ == '__main__':
         cell.by += -lr*np.expand_dims(np.mean(np.sum(dby, axis=0), 0), 0)
 
         if i % 10 == 0:
-            print(i, 'loss', "%.3f" % loss, 'baseline', baseline, 'lr', lr)
+            print(i, 'loss', "%.4f" % loss, 'baseline', baseline,
+                  'lr', "%.6f" % lr,
+                  'done', "%.3f" % (i/iterations))
         loss_lst.append(loss)
 
         if i % 1000 == 0 and i > 0:
