@@ -57,6 +57,7 @@ if __name__ == '__main__':
         deltay[-1, :, :, :] = cost.backward(y, out_lst[-1])
         deltah = cell.zero_state(batch_size)
         deltac = cell.zero_state(batch_size)
+        deltaz = cell.zero_state(batch_size)
         deltao = cell.zero_state(batch_size)
         deltai = cell.zero_state(batch_size)
         deltaf = cell.zero_state(batch_size)
@@ -64,11 +65,12 @@ if __name__ == '__main__':
         grad_lst = []
         # backward
         for t in reversed(range(time_steps)):
-            deltac, deltao, deltai, deltaf, \
+            deltac, deltaz, deltao, deltai, deltaf, \
                 dWout, dbout, dWz, dWi, dWf, dWo, dRz, dRi,\
                 dRf, dRo, dbz, dbi, dbf, dbo,\
                 dpi, dpf, dpo = \
                 cell.backward(deltay=deltay[t, :, :, :],
+                              deltaz=deltaz,
                               deltac=deltac,
                               deltao=deltao,
                               deltai=deltai,

@@ -150,16 +150,22 @@ class LSTMcell(object):
         return y, c, h, zbar, ibar, fbar, obar
 
     def backward(self, x, h, zbar, ibar, fbar, obar, c, cm1,
-                 deltay, deltac, deltao, deltai, deltaf):
+                 deltay, deltaz, deltac, deltao, deltai, deltaf):
         # projection backward
         dWout = np.matmul(deltay, np.transpose(h, [0, 2, 1]))
         dbout = 1*deltay
         deltay = np.matmul(np.transpose(self.Wout, [0, 2, 1]), deltay)
-
+        
         # block backward
-        deltao = deltay * self.out_activation.forward(c)\
+        deltah = deltay \
+            + np.matmul(np.transpose(self.Rz, [0, 2, 1]), deltaz) \
+            + np.matmul(np.transpose(self.Ri, [0, 2, 1]), deltai) \
+            + np.matmul(np.transpose(self.Rf, [0, 2, 1]), deltaf) \
+            + np.matmul(np.transpose(self.Ro, [0, 2, 1]), deltao)
+
+        deltao = deltah * self.out_activation.forward(c)\
             * self.gate_o_act.prime(obar)
-        deltac = deltay * self.gate_o_act.forward(obar)\
+        deltac = deltah * self.gate_o_act.forward(obar)\
             * self.state_activation.prime(c)\
             + self.po*deltao \
             + self.pi*deltai \
@@ -190,7 +196,94 @@ class LSTMcell(object):
         dpf = c*deltaf
         dpo = c*deltao
 
-        return deltac, deltao, deltai, deltaf, \
+        return deltac, deltaz, deltao, deltai, deltaf, \
             dWout, dbout, dWz, dWi, dWf, dWo, dRz, dRi,\
             dRf, dRo, dbz, dbi, dbf, dbo,\
             dpi, dpf, dpo
+
+
+class GRU(object):
+    def __init__(self, hidden_size=250,
+                 input_size=1, output_size=1):
+
+        self.hidden_size = hidden_size
+        # create the weights
+        s = 1./np.sqrt(hidden_size)
+        self.Wr = np.random.randn(1, hidden_size, input_size)*s
+        self.Wu = np.random.randn(1, hidden_size, input_size)*s
+        self.W = np.random.randn(1, hidden_size, input_size)*s
+
+        self.Vr = np.random.randn(1, hidden_size, hidden_size)*s
+        self.Vu = np.random.randn(1, hidden_size, hidden_size)*s
+        self.V = np.random.randn(1, hidden_size, hidden_size)*s
+
+        self.br = np.zeros((1, hidden_size, 1))*s
+        self.bu = np.random.randn(1, hidden_size, 1)*s
+        self.b = np.random.randn(1, hidden_size, 1)*s
+
+        self.state_activation = Tanh()
+        self.out_activation = Tanh()
+        self.gate_r_act = Sigmoid()
+        self.gate_u_act = Sigmoid()
+
+        self.Wout = np.random.randn(1, output_size, hidden_size)*s
+        self.bout = np.random.randn(1, output_size, 1)
+
+    def zero_state(self, batch_size):
+        return np.zeros((batch_size, self.hidden_size, 1))
+
+    def forward(self, x, h, c):
+        # reset gate
+        rbar = np.matmul(self.Wr, x) + np.matmul(self.Vr, h) + self.br
+        r = self.gate_r_act.forward(rbar)
+        # update gate
+        ubar = np.matmul(self.Wu, x) + np.matmul(self.Vu, h) + self.b
+        u = self.gate_u_act.forward(ubar)
+        # block input
+        hbar = r*h
+        zbar = np.matmul(self.W, x) + np.matmul(self.V, hbar) + self.b
+        z = self.state_activation.forward(zbar)
+        # recurrent update
+        hnew = u*z + (1 - u)*h
+        # linear projection
+        y = np.matmul(self.Wout, h) + self.bout
+
+        return y, hnew, zbar, rbar, ubar
+
+    def backward(self, x, h, hm1, zbar, ubar, rbar,
+                 deltay, deltaz, deltah, deltau, deltar):
+        # projection backward
+        dWout = np.matmul(deltay, np.transpose(h, [0, 2, 1]))
+        dbout = 1*deltay
+        deltay = np.matmul(np.transpose(self.Wout, [0, 2, 1]), deltay)
+
+        # block backward
+        wtdz = np.matmul(np.transpose(self.W, [0, 2, 1]), deltaz)
+        deltah = deltay \
+            + (1 - self.gate)*self.gate_u_act(ubar) \
+            + self.gate_r_act(rbar)*wtdz \
+            + np.matmul(np.transpose(self.Wu, [0, 2, 1]), deltau) \
+            + np.matmul(np.transpose(self.Wr, [0, 2, 1]), deltar)
+
+        deltaz = self.gate_u_act(ubar) \
+            * deltah * self.state_activation.prime(zbar)
+        deltau = (self.state_activation(zbar) - h) \
+            * deltah * self.gate_u_act(ubar)
+        deltar = h*wtdz*self.gate_r_act.prime(rbar)
+
+        # weight backward
+        dW = np.matmul(deltaz, np.transpose(x, [0, 2, 1]))
+        dWu = np.matmul(deltau, np.transpose(x, [0, 2, 1]))
+        dWr = np.matmul(deltar, np.transpose(x, [0, 2, 1]))
+
+        dV = np.matmul(deltaz, np.transpose(h, [0, 2, 1]))
+        dVu = np.matmul(deltau, np.transpose(h, [0, 2, 1]))
+        dVr = np.matmul(deltar, np.transpose(h, [0, 2, 1]))
+
+        db = deltaz
+        dbu = deltau
+        dbr = deltar
+
+        return deltah, deltaz, deltau, deltar,\
+            dWout, dbout, dW, dWu, dWr, dV, dVu,\
+            dVr, db, dbu, dbr
