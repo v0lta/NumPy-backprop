@@ -94,7 +94,6 @@ if __name__ == '__main__':
         dbu = np.stack(ldbu, axis=0)
         dbr = np.stack(ldbr, axis=0)
 
-
         # backprop in time requires us to sum the gradients at each
         # point in time. Clip between -1 and 1.
         dWout = np.clip(np.sum(ldWout, axis=0), -1, 1)
@@ -131,9 +130,16 @@ if __name__ == '__main__':
         if i % 1000 == 0 and i > 0:
             lr = lr * 0.90
 
+    # 0th batch marked inputs
+    print(x[x[:, 0, 1, 0] == 1., 0, 0, 0])
+    # desired output for all batches
     print(y[:, 0, 0])
+    # network output for all batches
     print(out[:, 0, 0])
     plt.semilogy(loss_lst)
+    plt.title('loss')
+    plt.xlabel('weight updates')
+    plt.ylabel('mean squared error')
     plt.show()
 
     # test

@@ -9,13 +9,14 @@ class MSELoss(object):
     ''' Mean squared error loss function. '''
     def forward(self, label, out):
         diff = out - label
-        return np.mean(0.5*diff*diff)
+        return np.mean(diff*diff)
 
     def backward(self, label, out):
         return out - label
 
 
 class Tanh(object):
+    """ Hyperbolic tangent activation function. """
     def forward(self, inputs):
         return np.tanh(inputs)
 
@@ -27,7 +28,7 @@ class Tanh(object):
 
 
 class Sigmoid(object):
-
+    """ Sigmoid activation function. """
     def sigmoid(self, inputs):
         sig = np.exp(inputs)/(1 + np.exp(inputs))
         return np.nan_to_num(sig)
@@ -205,7 +206,15 @@ class LSTMcell(object):
 class GRU(object):
     def __init__(self, hidden_size=250,
                  input_size=1, output_size=1):
+        """Create a Gated Recurrent unit.
 
+        Args:
+            hidden_size (int, optional): The cell size. Defaults to 250.
+            input_size (int, optional): The number of input dimensions.
+                                        Defaults to 1.
+            output_size (int, optional): Output dimension number.
+                                         Defaults to 1.
+        """
         self.hidden_size = hidden_size
         # create the weights
         s = 1./np.sqrt(hidden_size)
@@ -233,6 +242,20 @@ class GRU(object):
         return np.zeros((batch_size, self.hidden_size, 1))
 
     def forward(self, x, h):
+        """Gated recurrent unit forward pass.
+
+        Args:
+            x (np.array): Current input [batch_size, input_dim, 1]
+            h (np.array): Current cell state [batch_size, hidden_dim, 1]
+
+        Returns:
+            y (np.array): Current output
+            hnew (np.array): Current cell state
+            zbar (np.array): Pre-activation state candidate values.
+            hbar (np.array): Pre-activation block input.
+            rbar (np.array): Pre-activation reset-gate input.
+            ubar (np.array): Pre-activation update-gate input.
+        """
         # reset gate
         rbar = np.matmul(self.Vr, x) + np.matmul(self.Wr, h) + self.br
         r = self.gate_r_act.forward(rbar)
@@ -247,11 +270,42 @@ class GRU(object):
         hnew = u*z + (1 - u)*h
         # linear projection
         y = np.matmul(self.Wout, h) + self.bout
-
         return y, hnew, zbar, hbar, rbar, ubar
 
     def backward(self, x, h, hm1, zbar, ubar, rbar,
                  deltay, deltaz, deltah, deltau, deltar):
+        """Gated recurrent unit backward pass.
+
+        Args:
+            x (np.array): Input at current time step.
+            h (np.array): Cell state at current time step.
+            hm1 (np.array): Cell state at previous time step.
+            zbar (np.array): Pre-activation state candidate values.
+            rbar (np.array): Pre-activation reset-gate input.
+            ubar (np.array): Pre-activation update-gate input.
+            deltay (np.array): Gradient from above.
+            deltaz (np.array): State candidate gradients.
+            deltah (np.array): Block gradients.
+            deltau (np.array): Update gate gradients.
+            deltar (np.array): Reset gate gradients.
+
+        Returns:
+            deltahn: New recurrent gradients.
+            deltaz: State candidate gradients.
+            deltau: Update gate gradients.
+            deltar: Reset gate gradients.
+            dWout: Output projection weight matrix gradients.
+            dbout: Output projection bias gadients.
+            dW: State candidate input matrix gradients.
+            dWu: Update gate input matrix gradients.
+            dWr: Reset gate input matrix gradients.
+            dV: State candidate recurrent matrix gradients.
+            dVu: Update gate recurrent matrix gradients.
+            dVr: Reset gate recurrent matrix gradients.
+            db: State candidate bias gradients.
+            dbu: Update gate bias gradients.
+            dbr: Reset gate bias gradients.
+        """
         # projection backward
         dWout = np.matmul(deltay, np.transpose(h, [0, 2, 1]))
         dbout = 1*deltay
