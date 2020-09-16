@@ -209,13 +209,13 @@ class GRU(object):
         self.hidden_size = hidden_size
         # create the weights
         s = 1./np.sqrt(hidden_size)
-        self.Wr = np.random.randn(1, hidden_size, input_size)*s
-        self.Wu = np.random.randn(1, hidden_size, input_size)*s
-        self.W = np.random.randn(1, hidden_size, input_size)*s
+        self.Vr = np.random.randn(1, hidden_size, input_size)*s
+        self.Vu = np.random.randn(1, hidden_size, input_size)*s
+        self.V = np.random.randn(1, hidden_size, input_size)*s
 
-        self.Vr = np.random.randn(1, hidden_size, hidden_size)*s
-        self.Vu = np.random.randn(1, hidden_size, hidden_size)*s
-        self.V = np.random.randn(1, hidden_size, hidden_size)*s
+        self.Wr = np.random.randn(1, hidden_size, hidden_size)*s
+        self.Wu = np.random.randn(1, hidden_size, hidden_size)*s
+        self.W = np.random.randn(1, hidden_size, hidden_size)*s
 
         self.br = np.zeros((1, hidden_size, 1))*s
         self.bu = np.random.randn(1, hidden_size, 1)*s
@@ -232,23 +232,23 @@ class GRU(object):
     def zero_state(self, batch_size):
         return np.zeros((batch_size, self.hidden_size, 1))
 
-    def forward(self, x, h, c):
+    def forward(self, x, h):
         # reset gate
-        rbar = np.matmul(self.Wr, x) + np.matmul(self.Vr, h) + self.br
+        rbar = np.matmul(self.Vr, x) + np.matmul(self.Wr, h) + self.br
         r = self.gate_r_act.forward(rbar)
         # update gate
-        ubar = np.matmul(self.Wu, x) + np.matmul(self.Vu, h) + self.b
+        ubar = np.matmul(self.Vu, x) + np.matmul(self.Wu, h) + self.b
         u = self.gate_u_act.forward(ubar)
         # block input
         hbar = r*h
-        zbar = np.matmul(self.W, x) + np.matmul(self.V, hbar) + self.b
+        zbar = np.matmul(self.V, x) + np.matmul(self.W, hbar) + self.b
         z = self.state_activation.forward(zbar)
         # recurrent update
         hnew = u*z + (1 - u)*h
         # linear projection
         y = np.matmul(self.Wout, h) + self.bout
 
-        return y, hnew, zbar, rbar, ubar
+        return y, hnew, zbar, hbar, rbar, ubar
 
     def backward(self, x, h, hm1, zbar, ubar, rbar,
                  deltay, deltaz, deltah, deltau, deltar):
@@ -259,31 +259,31 @@ class GRU(object):
 
         # block backward
         wtdz = np.matmul(np.transpose(self.W, [0, 2, 1]), deltaz)
-        deltah = deltay \
-            + (1 - self.gate)*self.gate_u_act(ubar) \
-            + self.gate_r_act(rbar)*wtdz \
+        deltahn = deltay \
+            + (1 - self.gate_u_act.forward(ubar))*deltah \
+            + self.gate_r_act.forward(rbar)*wtdz \
             + np.matmul(np.transpose(self.Wu, [0, 2, 1]), deltau) \
             + np.matmul(np.transpose(self.Wr, [0, 2, 1]), deltar)
 
-        deltaz = self.gate_u_act(ubar) \
-            * deltah * self.state_activation.prime(zbar)
-        deltau = (self.state_activation(zbar) - h) \
-            * deltah * self.gate_u_act(ubar)
+        deltaz = self.gate_u_act.forward(ubar) \
+            * deltahn * self.state_activation.prime(zbar)
+        deltau = (self.state_activation.forward(zbar) - h) \
+            * deltah * self.gate_u_act.forward(ubar)
         deltar = h*wtdz*self.gate_r_act.prime(rbar)
 
         # weight backward
-        dW = np.matmul(deltaz, np.transpose(x, [0, 2, 1]))
-        dWu = np.matmul(deltau, np.transpose(x, [0, 2, 1]))
-        dWr = np.matmul(deltar, np.transpose(x, [0, 2, 1]))
+        dV = np.matmul(deltaz, np.transpose(x, [0, 2, 1]))
+        dVu = np.matmul(deltau, np.transpose(x, [0, 2, 1]))
+        dVr = np.matmul(deltar, np.transpose(x, [0, 2, 1]))
 
-        dV = np.matmul(deltaz, np.transpose(h, [0, 2, 1]))
-        dVu = np.matmul(deltau, np.transpose(h, [0, 2, 1]))
-        dVr = np.matmul(deltar, np.transpose(h, [0, 2, 1]))
+        dW = np.matmul(deltaz, np.transpose(h, [0, 2, 1]))
+        dWu = np.matmul(deltau, np.transpose(h, [0, 2, 1]))
+        dWr = np.matmul(deltar, np.transpose(h, [0, 2, 1]))
 
         db = deltaz
         dbu = deltau
         dbr = deltar
 
-        return deltah, deltaz, deltau, deltar,\
+        return deltahn, deltaz, deltau, deltar,\
             dWout, dbout, dW, dWu, dWr, dV, dVu,\
             dVr, db, dbu, dbr
