@@ -12,6 +12,8 @@ layers on the Mnist problem.
 The 'rnn' folder contains recurrent neural networks and code to train them
 on the adding problem.
 
+The source code in this repository has been tested using NumPy version 1.18.1
+and should run on any mid to top range CPU.
 
 
 Sample output Rummelhard Fig. 1:
