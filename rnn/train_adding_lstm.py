@@ -10,7 +10,7 @@ if __name__ == '__main__':
     n_train = int(9e5)
     n_test = int(1e4)
     baseline = 0.167
-    time_steps = 50
+    time_steps = 30
     batch_size = 25
     lr = 0.1
     cell = LSTMcell(hidden_size=64, input_size=2)

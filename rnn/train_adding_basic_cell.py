@@ -1,3 +1,6 @@
+# This script trains a basic elman rnn cell on the
+# memory problem.
+
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -8,10 +11,10 @@ if __name__ == '__main__':
     n_train = int(9e5)
     n_test = int(1e4)
     baseline = 0.167
-    time_steps = 12
+    time_steps = 30
     batch_size = 25
     lr = 0.1
-    cell = BasicCell(hidden_size=56, input_size=2)
+    cell = BasicCell(hidden_size=64, input_size=2)
     cost = MSELoss()
 
     train_x, train_y = generate_data_adding(time_steps, n_train)
@@ -64,13 +67,18 @@ if __name__ == '__main__':
         # point in time.
 
         # todo add clipping.
+        dWhh = np.clip(np.sum(dWhh, axis=0), -1, 1)
+        dWxh = np.clip(np.sum(dWxh, axis=0), -1, 1)
+        dbh = np.clip(np.sum(dbh, axis=0), -1, 1)
+        dWhy = np.clip(np.sum(dWhy, axis=0), -1, 1)
+        dby = np.clip(np.sum(dby, axis=0), -1, 1)
 
         # update
-        cell.Whh += -lr*np.expand_dims(np.mean(np.sum(dWhh, axis=0), 0), 0)
-        cell.Wxh += -lr*np.expand_dims(np.mean(np.sum(dWxh, axis=0), 0), 0)
-        cell.bh += -lr*np.expand_dims(np.mean(np.sum(dbh, axis=0), 0), 0)
-        cell.Why += -lr*np.expand_dims(np.mean(np.sum(dWhy, axis=0), 0), 0)
-        cell.by += -lr*np.expand_dims(np.mean(np.sum(dby, axis=0), 0), 0)
+        cell.Whh += -lr*np.expand_dims(np.mean(dWhh, 0), 0)
+        cell.Wxh += -lr*np.expand_dims(np.mean(dWxh, 0), 0)
+        cell.bh += -lr*np.expand_dims(np.mean(dbh, 0), 0)
+        cell.Why += -lr*np.expand_dims(np.mean(dWhy, 0), 0)
+        cell.by += -lr*np.expand_dims(np.mean(dby, 0), 0)
 
         if i % 10 == 0:
             print(i, 'loss', "%.4f" % loss, 'baseline', baseline,
@@ -79,12 +87,16 @@ if __name__ == '__main__':
         loss_lst.append(loss)
 
         if i % 1000 == 0 and i > 0:
-            lr = lr * 0.95
+            lr = lr * 0.90
 
+    # 0th batch marked inputs
+    print(x[x[:, 0, 1, 0] == 1., 0, 0, 0])
+    # desired output for all batches
     print(y[:, 0, 0])
+    # network output for all batches
     print(out[:, 0, 0])
     plt.semilogy(loss_lst)
+    plt.title('loss')
+    plt.xlabel('weight updates')
+    plt.ylabel('mean squared error')
     plt.show()
-
-    # test
-    test_x, test_y = generate_data_adding(time_steps, n_test)
