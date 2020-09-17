@@ -90,8 +90,15 @@ class BasicCell(object):
 
 
 class LSTMcell(object):
-    def __init__(self, hidden_size=250,
+    def __init__(self, hidden_size=64,
                  input_size=1, output_size=1):
+        """ Instantiate a Long Short Term Memory Cell.
+
+        Args:
+            hidden_size (int, optional): The cell size. Defaults to 64.
+            input_size (int, optional): Input size. Defaults to 1.
+            output_size (int, optional): The size of the output. Defaults to 1.
+        """
         self.hidden_size = hidden_size
         # create the weights
         s = 1./np.sqrt(hidden_size)
@@ -127,6 +134,22 @@ class LSTMcell(object):
         return np.zeros((batch_size, self.hidden_size, 1))
 
     def forward(self, x, h, c):
+        """LSTM forward pass
+
+        Args:
+            x (np.array): Array containing the current inputs..
+            h (np.array): Pre-projection cell output vector.
+            c (np.array): Cell state.
+
+        Returns:
+            y (np.array): Projected cell output.
+            c (np.array): Cell memory state
+            h (np.array): Gated output vector.
+            zbar (np.array): Pre-activation block input.
+            ibar (np.array): Pre-activation input gate vector.
+            fbar (np.array): Pre-activation forget gate vector.
+            obar (np.array): Pre-activation output gate vector.
+        """
         # block input
         zbar = np.matmul(self.Wz, x) + np.matmul(self.Rz, h) + self.bz
         z = self.state_activation.forward(zbar)
@@ -156,7 +179,7 @@ class LSTMcell(object):
         dWout = np.matmul(deltay, np.transpose(h, [0, 2, 1]))
         dbout = 1*deltay
         deltay = np.matmul(np.transpose(self.Wout, [0, 2, 1]), deltay)
-        
+
         # block backward
         deltah = deltay \
             + np.matmul(np.transpose(self.Rz, [0, 2, 1]), deltaz) \

@@ -1,3 +1,6 @@
+# This script trains a gated recurrent unit on the adding problem using
+# exclusively numpy functions.
+
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -8,10 +11,10 @@ if __name__ == '__main__':
     n_train = int(9e5)
     n_test = int(1e4)
     baseline = 0.167
-    time_steps = 12
+    time_steps = 50
     batch_size = 25
     lr = 0.1
-    cell = GRU(hidden_size=56, input_size=2)
+    cell = GRU(hidden_size=64, input_size=2)
     cost = MSELoss()
 
     train_x, train_y = generate_data_adding(time_steps, n_train)
@@ -141,6 +144,3 @@ if __name__ == '__main__':
     plt.xlabel('weight updates')
     plt.ylabel('mean squared error')
     plt.show()
-
-    # test
-    test_x, test_y = generate_data_adding(time_steps, n_test)
