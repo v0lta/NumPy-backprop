@@ -6,6 +6,13 @@ in pure NumPy for educational purposes. Working only in NumPy makes the backward
 pass explicit, which is automatically computed in frameworks like pyTorch.
 Implementing the backward pass by hand was a very instructive exercise.
 
+The 'feedforward' folder explores fully connected and convolutional
+layers on the mnist problem.
+
+The 'rnn' folder contains recurrent neural networks and code to train them
+on the adding problem.
+
+
 
 Sample output Rummelhard Fig. 1:
 -------------------------
