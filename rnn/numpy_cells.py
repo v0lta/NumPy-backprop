@@ -68,12 +68,39 @@ class BasicCell(object):
         return np.zeros((batch_size, self.hidden_size, 1))
 
     def forward(self, x, h):
+        """Basic Cell forward pass.
+
+        Args:
+            x (np.array): The input at the current time step.
+            h (np.array): The cell-state at the current time step.
+
+        Returns:
+            y (np.array): Cell output.
+            h (np.array): Updated cell state.
+        """        
         h = np.matmul(self.Whh, h) + np.matmul(self.Wxh, x) + self.bh
         h = self.activation.forward(h)
         y = np.matmul(self.Why, h) + self.by
         return y, h
 
     def backward(self, deltay, deltah, x, h, hm1):
+        """The backward pass of the Basic-RNN cell.
+
+        Args:
+            deltay (np.array): Deltas from the layer above.
+            deltah (np.array): Cell state deltas.
+            x (np.array): Input at current time step.
+            h (np.array): State at current time step.
+            hm1 (np.array): State at previous time step.
+
+        Returns:
+            deltah (np.array): Updated block deltas.
+            dWhh (np.array): Recurrent weight matrix gradients.
+            dWxh (np.array): Input weight matrix gradients
+            dbh (np.array): Bias gradients.
+            dWhy (np.array):  Output projection matrix gradients.
+            dby (np.array): Ouput bias gradients.
+        """
         # output backprop
         dydh = np.matmul(np.transpose(self.Why, [0, 2, 1]), deltay)
         dWhy = np.matmul(deltay, np.transpose(h, [0, 2, 1]))
