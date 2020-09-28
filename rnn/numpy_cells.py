@@ -1,3 +1,4 @@
+# Created by moritz (wolter@cs.uni-bonn.de)
 # based on https://gist.github.com/karpathy/d4dee566867f8291f086,
 # https://github.com/wiseodd/hipsternet/blob/master/hipsternet/neuralnet.py
 # see also https://arxiv.org/pdf/1503.04069.pdf

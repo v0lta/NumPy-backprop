@@ -1,3 +1,4 @@
+# Created by moritz (wolter@cs.uni-bonn.de)
 # This script trains a LSTM cell on the adding problem using numpy only.
 
 import numpy as np

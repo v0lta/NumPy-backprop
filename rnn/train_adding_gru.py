@@ -1,3 +1,4 @@
+# Created by moritz (wolter@cs.uni-bonn.de)
 # This script trains a gated recurrent unit on the adding problem using
 # exclusively numpy functions.
 

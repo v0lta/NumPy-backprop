@@ -1,3 +1,4 @@
+# Created by moritz (wolter@cs.uni-bonn.de)
 # a numpy only le net implementation
 # based on http://yann.lecun.com/exdb/publis/pdf/lecun-98.pdf
 # and https://github.com/mnielsen/neural-networks-and-deep-learning/blob/master/src/network2.py
@@ -134,10 +135,16 @@ class ConvLayer(object):
         res += self.bias
         return res
 
-    def backward(self, inputs, prev_grad):
-        # todo replace matmul with conv?
-        # dx = np.matmul(np.transpose(self.weight, [0, 2, 1]), prev_grad)
-        # dw = np.matmul(prev_grad, np.transpose(inputs, [0, 2, 1]))
+    def backward(self, inputs: np.array, prev_grad: np.array):
+        """
+        Args:
+            img (np.array): The input 'image' [batch, channel, height, weight]
+            prev_grad (np.array): The input gradients from the layer above.
+        Returns:
+            dx: (np.array): Gradient input into the next layer.
+            dk: (np.array): Kernel gradient.
+            db: (np.array): Bias gradient.
+        """
         kernel_shape = self.kernel.shape
         img_shape = inputs.shape
         kernel_flat = np.reshape(self.kernel,

@@ -1,3 +1,4 @@
+# Created by moritz (wolter@cs.uni-bonn.de)
 import struct
 import random
 import numpy as np
@@ -42,13 +43,13 @@ if __name__ == '__main__':
 
     lr = 0.001
     batch_size = 100
-    dense = ConvLayer(in_channels=1, out_channels=128,
+    conv = ConvLayer(in_channels=1, out_channels=128,
                       height=4, width=4, stride=2, padding=0)
     act1 = Sigmoid()
-    dense2 = ConvLayer(in_channels=128, out_channels=256,
+    conv2 = ConvLayer(in_channels=128, out_channels=256,
                        height=3, width=3, stride=2)
     act2 = Sigmoid()
-    dense3 = ConvLayer(in_channels=256, out_channels=10,
+    conv3 = ConvLayer(in_channels=256, out_channels=10,
                        height=6, width=6, stride=1)
     act3 = Sigmoid()
     cost = CrossEntropyCost()
@@ -84,31 +85,31 @@ if __name__ == '__main__':
             x = img_batch
 
             # forward pass
-            h1 = dense.forward(x)
+            h1 = conv.forward(x)
             h1_nl = act1.forward(h1)
-            h2 = dense2.forward(h1_nl)
+            h2 = conv2.forward(h1_nl)
             h2_nl = act2.forward(h2)
-            h3 = dense3.forward(h2_nl)
+            h3 = conv3.forward(h2_nl)
             y_hat = act3.forward(h3)
             loss = cost.forward(label=y, out=y_hat)
 
             # backward pass
             dl = cost.backward(label=y, out=y_hat)
-            dx3, dk3, db3 = dense3.backward(inputs=h2_nl, prev_grad=dl)
+            dx3, dk3, db3 = conv3.backward(inputs=h2_nl, prev_grad=dl)
             dx3 = act2.backward(h2, dx3)
-            dx2, dk2, db2 = dense2.backward(inputs=h1_nl, prev_grad=dx3)
+            dx2, dk2, db2 = conv2.backward(inputs=h1_nl, prev_grad=dx3)
             dx2 = act1.backward(h1, dx2)
-            dx, dk, db = dense.backward(inputs=x, prev_grad=dx2)
+            dx, dk, db = conv.backward(inputs=x, prev_grad=dx2)
 
             # update
-            dense.kernel += -lr*dk
-            dense.bias += -lr*np.expand_dims(np.mean(db, axis=(0, 2, 3)),
+            conv.kernel += -lr*dk
+            conv.bias += -lr*np.expand_dims(np.mean(db, axis=(0, 2, 3)),
                                              (0, 2, 3))
-            dense2.kernel += -lr*dk2
-            dense2.bias += -lr*np.expand_dims(np.mean(db2, axis=(0, 2, 3)),
+            conv2.kernel += -lr*dk2
+            conv2.bias += -lr*np.expand_dims(np.mean(db2, axis=(0, 2, 3)),
                                               (0, 2, 3))
-            dense3.kernel += -lr*dk3
-            dense3.bias += -lr*np.expand_dims(np.mean(db3, axis=(0, 2, 3)),
+            conv3.kernel += -lr*dk3
+            conv3.bias += -lr*np.expand_dims(np.mean(db3, axis=(0, 2, 3)),
                                               (0, 2, 3))
             loss_lst.append(loss)
 
@@ -146,11 +147,11 @@ for no, img_batch in enumerate(img_batches):
     for b in range(batch_size):
         x = img_batch
         # forward pass
-        h1 = dense.forward(x)
+        h1 = conv.forward(x)
         h1_nl = act1.forward(h1)
-        h2 = dense2.forward(h1_nl)
+        h2 = conv2.forward(h1_nl)
         h2_nl = act2.forward(h2)
-        h3 = dense3.forward(h2_nl)
+        h3 = conv3.forward(h2_nl)
         y_hat = act3.forward(h3)
         true = np.sum((labels == np.squeeze(np.argmax(y_hat, axis=1))
                        ).astype(np.float32))
