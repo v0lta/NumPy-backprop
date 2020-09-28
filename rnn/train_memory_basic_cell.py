@@ -1,3 +1,4 @@
+# Created by moritz (wolter@cs.uni-bonn.de)
 # This script trains a basic elman rnn cell on the
 # memory problem.
 
