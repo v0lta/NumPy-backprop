@@ -1,3 +1,5 @@
+The code here ist not yet perfectly stable. You may have to run it several times
+to get the expected output below.
 
 Sample output Rummelhard Fig. 1:
 -------------------------
