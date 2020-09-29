@@ -4,7 +4,7 @@ Numpy Re-Implementations of iconic machine learning breakthroughs.
 In this repository, important machine learning structures are implemented 
 in pure NumPy for educational purposes. Working only in NumPy makes the backward
 pass explicit, which is automatically computed in frameworks like PyTorch.
-Implementing the backward pass by hand was a very instructive exercise.
+Implementing the backward pass by hand is a very instructive exercise.
 
 The ```feedforward``` folder explores fully connected and convolutional
 layers on the MNIST digit recognition problem.
