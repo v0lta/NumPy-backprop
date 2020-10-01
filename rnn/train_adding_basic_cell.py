@@ -1,6 +1,6 @@
 # Created by moritz (wolter@cs.uni-bonn.de)
 # This script trains a basic elman rnn cell on the
-# memory problem.
+# adding problem.
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -67,7 +67,7 @@ if __name__ == '__main__':
         # backprop in time requires us to sum the gradients at each
         # point in time.
 
-        # todo add clipping.
+        # clipping.
         dWhh = np.clip(np.sum(dWhh, axis=0), -1, 1)
         dWxh = np.clip(np.sum(dWxh, axis=0), -1, 1)
         dbh = np.clip(np.sum(dbh, axis=0), -1, 1)
