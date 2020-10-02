@@ -20,7 +20,8 @@ def normalize(data, mean=None, std=None):
 class CrossEntropyCost(object):
 
     def forward(self, label, out):
-        return np.sum(np.nan_to_num(-label*np.log(out)-(1-label)*np.log(1-out)))
+        return -np.mean(np.nan_to_num(label*np.log(out)
+                                      +(1-label)*np.log(1-out)))
 
     def backward(self, label, out):
         return (out-label)

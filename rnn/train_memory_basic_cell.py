@@ -6,23 +6,25 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 from generate_adding_memory import generate_data_memory
-from numpy_cells import BasicCell, MSELoss
+from numpy_cells import BasicCell, CrossEntropyCost, MSELoss, Sigmoid
 
 if __name__ == '__main__':
     n_train = int(9e5)
     n_test = int(1e4)
-    time_steps = 5
+    time_steps = 2
     output_size = 9
     n_sequence = 10
     train_data = generate_data_memory(time_steps, n_train, n_sequence)
     test_data = generate_data_memory(time_steps, n_test, n_sequence)
     # --- baseline ----------------------
-    baseline = np.log(8) * 10/(time_steps )
+    baseline = np.log(8) * 10/(time_steps + 20)
     print("Baseline is " + str(baseline))
     batch_size = 25
     lr = 0.001
     cell = BasicCell(hidden_size=56, input_size=1)
-    # TODO: change loss function!
+    sigmoid = Sigmoid()
+
+    # TODO: replace with cross entropy
     cost = MSELoss()
 
     train_x, train_y = generate_data_memory(time_steps, n_train, n_sequence)
@@ -46,12 +48,12 @@ if __name__ == '__main__':
         out_lst = []
         h_lst = []
         # forward
-        # TODO: update
         for t in range(time_steps+20):
             out, h = cell.forward(x=x[:, t, :, :], h=h)
+            # out = sigmoid.forward(out)
             out_lst.append(out)
             h_lst.append(h)
-        loss = cost.forward(y, np.stack(out_lst, 1))
+        loss = cost.forward(label=y, out=np.stack(out_lst, 1))
         # deltay = np.zeros((time_steps, batch_size, 1, 1))
         deltay = cost.backward(y, np.stack(out_lst, 1))
         deltah = cell.zero_state(batch_size)

@@ -17,6 +17,16 @@ class MSELoss(object):
         return out - label
 
 
+class CrossEntropyCost(object):
+
+    def forward(self, label, out):
+        return  np.mean(np.nan_to_num(label*np.log(out)
+                                       +(1-label)*np.log(1-out)))
+
+    def backward(self, label, out):
+        return (out-label)
+
+
 class Tanh(object):
     """ Hyperbolic tangent activation function. """
     def forward(self, inputs):
