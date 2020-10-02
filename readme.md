@@ -18,4 +18,5 @@ the original paper on backpropagation.
 The source code in this repository runs using NumPy versions >= 1.18.1
 and should run on any mid to top range CPU.
 
+The memory problem in the rnn folder is work in progress.
 I am looking for feedback! If you see an error please open an issue.
