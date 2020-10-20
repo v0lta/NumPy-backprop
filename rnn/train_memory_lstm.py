@@ -9,9 +9,9 @@ from generate_adding_memory import generate_data_memory
 from numpy_cells import LSTMcell, MSELoss, Sigmoid, CrossEntropyCost
 
 if __name__ == '__main__':
-    n_train = int(9e5)
+    n_train = int(10e5)
     n_test = int(1e4)
-    time_steps = 0
+    time_steps = 1
     output_size = 10
     n_sequence = 10
     train_data = generate_data_memory(time_steps, n_train, n_sequence)
@@ -20,7 +20,7 @@ if __name__ == '__main__':
     baseline = np.log(8) * 10/(time_steps + 20)
     print("Baseline is " + str(baseline))
     batch_size = 25
-    lr = 0.1
+    lr = 0.001
     cell = LSTMcell(hidden_size=64, input_size=10, output_size=output_size)
     sigmoid = Sigmoid()
 
@@ -186,9 +186,11 @@ if __name__ == '__main__':
         loss_lst.append(loss)
 
         if i % 1000 == 0 and i > 0:
-            lr = lr * 0.9
+            lr = lr * 0.99
 
             # import pdb;pdb.set_trace()
+            print('net', y_net[0, -10:])
+            print('gt ', yy[0, -10:])
 
     # 0th batch marked inputs
     print(x[x[:, 0, 1, 0] == 1., 0, 0, 0])
@@ -199,5 +201,5 @@ if __name__ == '__main__':
     plt.semilogy(loss_lst)
     plt.title('loss')
     plt.xlabel('weight updates')
-    plt.ylabel('mean squared error')
+    plt.ylabel('cross entropy')
     plt.show()

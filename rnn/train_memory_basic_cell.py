@@ -9,7 +9,7 @@ from generate_adding_memory import generate_data_memory
 from numpy_cells import BasicCell, CrossEntropyCost, MSELoss, Sigmoid
 
 if __name__ == '__main__':
-    n_train = int(9e5)
+    n_train = int(10e5)
     n_test = int(1e4)
     time_steps = 1
     output_size = 9
@@ -20,8 +20,8 @@ if __name__ == '__main__':
     baseline = np.log(8) * 10/(time_steps + 20)
     print("Baseline is " + str(baseline))
     batch_size = 25
-    lr = 0.01
-    cell = BasicCell(hidden_size=64, input_size=10, output_size=10)
+    lr = 0.001
+    cell = BasicCell(hidden_size=128, input_size=10, output_size=10)
     sigmoid = Sigmoid()
 
     cost = CrossEntropyCost()
@@ -76,6 +76,7 @@ if __name__ == '__main__':
         deltay[:, -10:, :, :] = cost.backward(label=y[:, -10:, :, :],
                                               out=out_array[:, -10:, :, :])
         deltah = cell.zero_state(batch_size)
+        # import pdb;pdb.set_trace()
         grad_lst = []
         # backward
         for t in reversed(range(time_steps+20)):
@@ -92,9 +93,9 @@ if __name__ == '__main__':
         dbh = np.stack(ldbh, axis=0)
         dWhy = np.stack(ldWhy, axis=0)
         dby = np.stack(ldby, axis=0)
+
         # backprop in time requires us to sum the gradients at each
         # point in time.
-
         # clipping.
         dWhh = np.clip(np.sum(dWhh, axis=0), -1, 1)
         dWxh = np.clip(np.sum(dWxh, axis=0), -1, 1)
@@ -117,11 +118,12 @@ if __name__ == '__main__':
         loss_lst.append(loss)
 
         if i % 1000 == 0 and i > 0:
-            lr = lr * 0.98
+            lr = lr * 0.99
             
             #res = np.squeeze(np.argmax(out_array, axis=2))
             #import pdb;pdb.set_trace()
-
+            print('net', y_net[0, -10:])
+            print('gt ', yy[0, -10:])
 
     print(y[:, 0, 0])
     print(out[:, 0, 0])
