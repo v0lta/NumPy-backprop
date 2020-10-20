@@ -12,26 +12,26 @@ from numpy_layer import Sigmoid
 
 
 def get_test_data():
-    with open('cnn/data/t10k-images-idx3-ubyte', 'rb') as f:
+    with open('feedforward/data/t10k-images-idx3-ubyte', 'rb') as f:
         magic, size = struct.unpack(">II", f.read(8))
         nrows, ncols = struct.unpack(">II", f.read(8))
         data = np.fromfile(f, dtype=np.dtype(np.uint8).newbyteorder('>'))
         img_data_test = data.reshape((size, nrows, ncols))
 
-    with open('cnn/data/t10k-labels-idx1-ubyte', 'rb') as f:
+    with open('feedforward/data/t10k-labels-idx1-ubyte', 'rb') as f:
         magic, size = struct.unpack(">II", f.read(8))
         lbl_data_test = np.fromfile(f, dtype=np.dtype(np.uint8))
     return img_data_test, lbl_data_test
 
 
 def get_train_data():
-    with open('cnn/data/train-images-idx3-ubyte', 'rb') as f:
+    with open('feedforward/data/train-images-idx3-ubyte', 'rb') as f:
         magic, size = struct.unpack(">II", f.read(8))
         nrows, ncols = struct.unpack(">II", f.read(8))
         data = np.fromfile(f, dtype=np.dtype(np.uint8).newbyteorder('>'))
         img_data_train = data.reshape((size, nrows, ncols))
 
-    with open('cnn/data/train-labels-idx1-ubyte', 'rb') as f:
+    with open('feedforward/data/train-labels-idx1-ubyte', 'rb') as f:
         magic, size = struct.unpack(">II", f.read(8))
         lbl_data_train = np.fromfile(f, dtype=np.dtype(np.uint8))
     return img_data_train, lbl_data_train

@@ -11,7 +11,7 @@ from numpy_cells import BasicCell, CrossEntropyCost, MSELoss, Sigmoid
 if __name__ == '__main__':
     n_train = int(9e5)
     n_test = int(1e4)
-    time_steps = 2
+    time_steps = 1
     output_size = 9
     n_sequence = 10
     train_data = generate_data_memory(time_steps, n_train, n_sequence)
@@ -20,12 +20,11 @@ if __name__ == '__main__':
     baseline = np.log(8) * 10/(time_steps + 20)
     print("Baseline is " + str(baseline))
     batch_size = 25
-    lr = 0.001
-    cell = BasicCell(hidden_size=56, input_size=1)
+    lr = 0.01
+    cell = BasicCell(hidden_size=64, input_size=10, output_size=10)
     sigmoid = Sigmoid()
 
-    # TODO: replace with cross entropy
-    cost = MSELoss()
+    cost = CrossEntropyCost()
 
     train_x, train_y = generate_data_memory(time_steps, n_train, n_sequence)
 
@@ -39,25 +38,44 @@ if __name__ == '__main__':
     loss_lst = []
     # train cell
     for i in range(iterations):
-        x = train_x_lst[i]
-        y = train_y_lst[i]
+        xx = train_x_lst[i]
+        yy = train_y_lst[i]
 
-        x = np.expand_dims(np.expand_dims(x, -1), -1)
-        y = np.expand_dims(np.expand_dims(y, -1), -1)
+        x_one_hot = np.zeros([batch_size, 20+time_steps, n_sequence])
+        y_one_hot = np.zeros([batch_size, 20+time_steps, n_sequence])
+        # one hote encode the inputs.
+        for b in range(batch_size):
+            for t in range(20+time_steps):
+                x_one_hot[b, t, xx[b, t]] = 1
+                y_one_hot[b, t, yy[b, t]] = 1
+                
+
+        x = np.expand_dims(x_one_hot, -1)
+        y = np.expand_dims(y_one_hot, -1)
 
         out_lst = []
         h_lst = []
         # forward
         for t in range(time_steps+20):
             out, h = cell.forward(x=x[:, t, :, :], h=h)
-            # out = sigmoid.forward(out)
+            out = sigmoid.forward(out)
             out_lst.append(out)
             h_lst.append(h)
-        loss = cost.forward(label=y, out=np.stack(out_lst, 1))
-        # deltay = np.zeros((time_steps, batch_size, 1, 1))
-        deltay = cost.backward(y, np.stack(out_lst, 1))
-        deltah = cell.zero_state(batch_size)
+        out_array = np.stack(out_lst, 1)
+        loss = cost.forward(label=y, out=out_array)
 
+        # compute accuracy
+        y_net = np.squeeze(np.argmax(out_array, axis=2))
+        mem_net = y_net[:, -10:]
+        mem_y = yy[:, -10:]
+        acc = np.sum((mem_y == mem_net).astype(np.float32))
+        acc = acc/(batch_size * 10.)
+        # import pdb;pdb.set_trace()
+
+        deltay = np.zeros([batch_size, time_steps+20, n_sequence, 1])
+        deltay[:, -10:, :, :] = cost.backward(label=y[:, -10:, :, :],
+                                              out=out_array[:, -10:, :, :])
+        deltah = cell.zero_state(batch_size)
         grad_lst = []
         # backward
         for t in reversed(range(time_steps+20)):
@@ -94,12 +112,16 @@ if __name__ == '__main__':
 
         if i % 10 == 0:
             print(i, 'loss', "%.4f" % loss, 'baseline', baseline,
-                  'lr', "%.6f" % lr,
+                  'acc', "%.4f" % acc, 'lr', "%.6f" % lr,
                   'done', "%.3f" % (i/iterations))
         loss_lst.append(loss)
 
         if i % 1000 == 0 and i > 0:
-            lr = lr * 0.95
+            lr = lr * 0.98
+            
+            #res = np.squeeze(np.argmax(out_array, axis=2))
+            #import pdb;pdb.set_trace()
+
 
     print(y[:, 0, 0])
     print(out[:, 0, 0])

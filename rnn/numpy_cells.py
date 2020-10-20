@@ -20,11 +20,12 @@ class MSELoss(object):
 class CrossEntropyCost(object):
 
     def forward(self, label, out):
-        return  np.mean(np.nan_to_num(label*np.log(out)
+        return  -np.mean(np.nan_to_num(label*np.log(out)
                                        +(1-label)*np.log(1-out)))
 
     def backward(self, label, out):
-        return (out-label)
+        """ Assuming a sigmoidal netwok output."""
+        return out-label
 
 
 class Tanh(object):
@@ -100,6 +101,7 @@ class BasicCell(object):
 
         Args:
             deltay (np.array): Deltas from the layer above.
+                               [batch_size, output_size, 1].
             deltah (np.array): Cell state deltas.
             x (np.array): Input at current time step.
             h (np.array): State at current time step.

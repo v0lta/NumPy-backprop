@@ -1,18 +1,18 @@
 # Created by moritz (wolter@cs.uni-bonn.de)
-# This script trains a basic elman rnn cell on the
+# This script trains a long short term memory cell on the
 # memory problem.
 
 import numpy as np
 import matplotlib.pyplot as plt
 
 from generate_adding_memory import generate_data_memory
-from numpy_cells import LSTMcell, MSELoss, Sigmoid
+from numpy_cells import LSTMcell, MSELoss, Sigmoid, CrossEntropyCost
 
 if __name__ == '__main__':
     n_train = int(9e5)
     n_test = int(1e4)
-    time_steps = 2
-    output_size = 9
+    time_steps = 0
+    output_size = 10
     n_sequence = 10
     train_data = generate_data_memory(time_steps, n_train, n_sequence)
     test_data = generate_data_memory(time_steps, n_test, n_sequence)
@@ -20,12 +20,11 @@ if __name__ == '__main__':
     baseline = np.log(8) * 10/(time_steps + 20)
     print("Baseline is " + str(baseline))
     batch_size = 25
-    lr = 0.001
-    cell = LSTMcell(hidden_size=56, input_size=1)
+    lr = 0.1
+    cell = LSTMcell(hidden_size=64, input_size=10, output_size=output_size)
     sigmoid = Sigmoid()
 
-    # TODO: replace with cross entropy
-    cost = MSELoss()
+    cost = CrossEntropyCost()
 
     train_x, train_y = generate_data_memory(time_steps, n_train, n_sequence)
 
@@ -41,11 +40,20 @@ if __name__ == '__main__':
     loss_lst = []
     # train cell
     for i in range(iterations):
-        x = train_x_lst[i]
-        y = train_y_lst[i]
+        xx = train_x_lst[i]
+        yy = train_y_lst[i]
 
-        x = np.expand_dims(np.expand_dims(x, -1), -1)
-        y = np.expand_dims(np.expand_dims(y, -1), -1)
+        x_one_hot = np.zeros([batch_size, 20+time_steps, n_sequence])
+        y_one_hot = np.zeros([batch_size, 20+time_steps, n_sequence])
+        # one hote encode the inputs.
+        for b in range(batch_size):
+            for t in range(20+time_steps):
+                x_one_hot[b, t, xx[b, t]] = 1
+                y_one_hot[b, t, yy[b, t]] = 1
+                
+
+        x = np.expand_dims(x_one_hot, -1)
+        y = np.expand_dims(y_one_hot, -1)
 
         out_lst = []
         c_lst = []
@@ -58,7 +66,7 @@ if __name__ == '__main__':
         for t in range(time_steps + 20):
             out, c, h, zbar, ibar, fbar, obar = \
                 cell.forward(x=x[:, t, :, :], c=c, h=h)
-            # out = sigmoid.forward(out)
+            out = sigmoid.forward(out)
             out_lst.append(out)
             c_lst.append(c)
             h_lst.append(h)
@@ -66,14 +74,25 @@ if __name__ == '__main__':
             ibar_lst.append(ibar)
             fbar_lst.append(fbar)
             obar_lst.append(obar)
-        loss = cost.forward(label=y, out=np.stack(out_lst, 1))
-        deltay = cost.backward(y, np.stack(out_lst, 1))
+        out_array = np.stack(out_lst, 1)
+        loss = cost.forward(label=y, out=out_array)
+        deltay = np.zeros([batch_size, time_steps+20, n_sequence, 1])
+        deltay[:, -10:, :, :] = cost.backward(label=y[:, -10:, :, :],
+                                              out=out_array[:, -10:, :, :])
         deltah = cell.zero_state(batch_size)
         deltac = cell.zero_state(batch_size)
         deltaz = cell.zero_state(batch_size)
         deltao = cell.zero_state(batch_size)
         deltai = cell.zero_state(batch_size)
         deltaf = cell.zero_state(batch_size)
+
+        # compute accuracy
+        y_net = np.squeeze(np.argmax(out_array, axis=2))
+        mem_net = y_net[:, -10:]
+        mem_y = yy[:, -10:]
+        acc = np.sum((mem_y == mem_net).astype(np.float32))
+        acc = acc/(batch_size * 10.)
+        # import pdb;pdb.set_trace()
 
         grad_lst = []
         # backward
@@ -123,23 +142,23 @@ if __name__ == '__main__':
         # backprop in time requires us to sum the gradients at each
         # point in time.
         # clipping prevents gradient explosion.
-        dWout = np.clip(np.sum(dWout, axis=0), -1, 1)
-        dbout = np.clip(np.sum(dbout, axis=0), -1, 1)
-        dWz = np.clip(np.sum(dWz, axis=0), -1, 1)
-        dWi = np.clip(np.sum(dWi, axis=0), -1, 1)
-        dWf = np.clip(np.sum(dWf, axis=0), -1, 1)
-        dWo = np.clip(np.sum(dWo, axis=0), -1, 1)
-        dRz = np.clip(np.sum(dRz, axis=0), -1, 1)
-        dRi = np.clip(np.sum(dRi, axis=0), -1, 1)
-        dRf = np.clip(np.sum(dRf, axis=0), -1, 1)
-        dRo = np.clip(np.sum(dRo, axis=0), -1, 1)
-        dbz = np.clip(np.sum(dbz, axis=0), -1, 1)
-        dbi = np.clip(np.sum(dbi, axis=0), -1, 1)
-        dbf = np.clip(np.sum(dbf, axis=0), -1, 1)
-        dbo = np.clip(np.sum(dbo, axis=0), -1, 1)
-        dpi = np.clip(np.sum(dpi, axis=0), -1, 1)
-        dpf = np.clip(np.sum(dpf, axis=0), -1, 1)
-        dpo = np.clip(np.sum(dpo, axis=0), -1, 1)
+        dWout = np.clip(np.sum(dWout, axis=0), -1.0, 1.0)
+        dbout = np.clip(np.sum(dbout, axis=0), -1.0, 1.0)
+        dWz = np.clip(np.sum(dWz, axis=0), -1.0, 1.0)
+        dWi = np.clip(np.sum(dWi, axis=0), -1.0, 1.0)
+        dWf = np.clip(np.sum(dWf, axis=0), -1.0, 1.0)
+        dWo = np.clip(np.sum(dWo, axis=0), -1.0, 1.0)
+        dRz = np.clip(np.sum(dRz, axis=0), -1.0, 1.0)
+        dRi = np.clip(np.sum(dRi, axis=0), -1.0, 1.0)
+        dRf = np.clip(np.sum(dRf, axis=0), -1.0, 1.0)
+        dRo = np.clip(np.sum(dRo, axis=0), -1.0, 1.0)
+        dbz = np.clip(np.sum(dbz, axis=0), -1.0, 1.0)
+        dbi = np.clip(np.sum(dbi, axis=0), -1.0, 1.0)
+        dbf = np.clip(np.sum(dbf, axis=0), -1.0, 1.0)
+        dbo = np.clip(np.sum(dbo, axis=0), -1.0, 1.0)
+        dpi = np.clip(np.sum(dpi, axis=0), -1.0, 1.0)
+        dpf = np.clip(np.sum(dpf, axis=0), -1.0, 1.0)
+        dpo = np.clip(np.sum(dpo, axis=0), -1.0, 1.0)
 
         # update
         cell.Wout += -lr*np.expand_dims(np.mean(dWout, 0), 0)
@@ -162,12 +181,14 @@ if __name__ == '__main__':
 
         if i % 10 == 0:
             print(i, 'loss', "%.4f" % loss, 'baseline', baseline,
-                  'lr', "%.6f" % lr,
+                  'acc', "%.4f" % acc, 'lr', "%.6f" % lr,
                   'done', "%.3f" % (i/iterations))
         loss_lst.append(loss)
 
         if i % 1000 == 0 and i > 0:
-            lr = lr * 0.90
+            lr = lr * 0.9
+
+            # import pdb;pdb.set_trace()
 
     # 0th batch marked inputs
     print(x[x[:, 0, 1, 0] == 1., 0, 0, 0])

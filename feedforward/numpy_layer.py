@@ -48,6 +48,11 @@ class DenseLayer(object):
         return np.matmul(self.weight, inputs) + self.bias
 
     def backward(self, inputs, prev_grad):
+        """ Backward pass through a dense layer.
+        Args:
+            inputs: [batch_size, input_dim, 1]
+            prev_grad: [batch_size, out_dim, 1]
+        """
         dx = np.matmul(np.transpose(self.weight, [0, 2, 1]), prev_grad)
         dw = np.matmul(prev_grad, np.transpose(inputs, [0, 2, 1]))
         db = 1*prev_grad
