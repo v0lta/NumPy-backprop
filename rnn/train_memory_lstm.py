@@ -12,7 +12,7 @@ from numpy_cells import LSTMcell, MSELoss, Sigmoid, CrossEntropyCost
 if __name__ == '__main__':
     n_train = int(10e5)
     n_test = int(1e4)
-    time_steps = 5
+    time_steps = 2
     output_size = 10
     n_sequence = 10
     train_data = generate_data_memory(time_steps, n_train, n_sequence)
@@ -21,7 +21,7 @@ if __name__ == '__main__':
     baseline = np.log(8) * 10/(time_steps + 20)
     print("Baseline is " + str(baseline))
     batch_size = 100
-    lr = 1.0
+    lr = 0.01
     cell = LSTMcell(hidden_size=64, input_size=10, output_size=output_size)
     sigmoid = Sigmoid()
 
@@ -163,7 +163,7 @@ if __name__ == '__main__':
         cell.weights['po'] += -lr*np.expand_dims(np.mean(dpo, 0), 0)
 
         if i % 10 == 0:
-            print(i, 'loss', "%.4f" % loss, 'baseline', baseline,
+            print(i, 'loss', "%.4f" % loss, 'baseline', "%.4f" % baseline,
                   'acc', "%.4f" % acc, 'lr', "%.6f" % lr,
                   'done', "%.3f" % (i/iterations))
         loss_lst.append(loss)
