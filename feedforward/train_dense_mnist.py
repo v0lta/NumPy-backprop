@@ -12,26 +12,26 @@ from numpy_layer import Sigmoid
 
 
 def get_test_data():
-    with open('feedforward/data/t10k-images-idx3-ubyte', 'rb') as f:
+    with open('./data/t10k-images-idx3-ubyte', 'rb') as f:
         magic, size = struct.unpack(">II", f.read(8))
         nrows, ncols = struct.unpack(">II", f.read(8))
         data = np.fromfile(f, dtype=np.dtype(np.uint8).newbyteorder('>'))
         img_data_test = data.reshape((size, nrows, ncols))
 
-    with open('feedforward/data/t10k-labels-idx1-ubyte', 'rb') as f:
+    with open('./data/t10k-labels-idx1-ubyte', 'rb') as f:
         magic, size = struct.unpack(">II", f.read(8))
         lbl_data_test = np.fromfile(f, dtype=np.dtype(np.uint8))
     return img_data_test, lbl_data_test
 
 
 def get_train_data():
-    with open('feedforward/data/train-images-idx3-ubyte', 'rb') as f:
+    with open('./data/train-images-idx3-ubyte', 'rb') as f:
         magic, size = struct.unpack(">II", f.read(8))
         nrows, ncols = struct.unpack(">II", f.read(8))
         data = np.fromfile(f, dtype=np.dtype(np.uint8).newbyteorder('>'))
         img_data_train = data.reshape((size, nrows, ncols))
 
-    with open('feedforward/data/train-labels-idx1-ubyte', 'rb') as f:
+    with open('./data/train-labels-idx1-ubyte', 'rb') as f:
         magic, size = struct.unpack(">II", f.read(8))
         lbl_data_train = np.fromfile(f, dtype=np.dtype(np.uint8))
     return img_data_train, lbl_data_train
@@ -92,19 +92,19 @@ if __name__ == '__main__':
 
             # backward pass
             dl = cost.backward(label=y, out=y_hat)
-            dw3, dx3, db3 = dense3.backward(inputs=h2_nl, prev_grad=dl)
-            dx3 = act2.backward(h2, dx3)
-            dw2, dx2, db2 = dense2.backward(inputs=h1_nl, prev_grad=dx3)
-            dx2 = act1.backward(h1, dx2)
-            dw, _, db = dense.backward(inputs=x, prev_grad=dx2)
+            grads_dense3 = dense3.backward(inputs=h2_nl, delta=dl)
+            dx3 = act2.backward(h2, grads_dense3['x'])
+            grads_dense2 = dense2.backward(inputs=h1_nl, delta=dx3)
+            dx2 = act1.backward(h1, grads_dense2['x'])
+            grads_dense = dense.backward(inputs=x, delta=dx2)
 
             # update
-            dense.weight += -lr*np.mean(dw, axis=0)
-            dense.bias += -lr*np.mean(db, axis=0)
-            dense2.weight += -lr*np.mean(dw2, axis=0)
-            dense2.bias += -lr*np.mean(db2, axis=0)
-            dense3.weight += -lr*np.mean(dw3, axis=0)
-            dense3.bias += -lr*np.mean(db3, axis=0)
+            dense.weights['W'] += -lr*np.mean(grads_dense['W'], axis=0)
+            dense.weights['b'] += -lr*np.mean(grads_dense['b'], axis=0)
+            dense2.weights['W'] += -lr*np.mean(grads_dense2['W'], axis=0)
+            dense2.weights['b'] += -lr*np.mean(grads_dense2['b'], axis=0)
+            dense3.weights['W'] += -lr*np.mean(grads_dense3['W'], axis=0)
+            dense3.weights['b'] += -lr*np.mean(grads_dense3['b'], axis=0)
             loss_lst.append(loss)
 
             true = np.sum((labels == np.squeeze(np.argmax(y_hat, axis=1))
@@ -117,39 +117,38 @@ if __name__ == '__main__':
         if e % 1 == 0:
             lr = lr / 2
 
-plt.plot(loss_lst)
-plt.show()
-plt.plot(acc_lst)
-plt.show()
+    plt.plot(loss_lst)
+    plt.show()
+    plt.plot(acc_lst)
+    plt.show()
 
+    img_data_test, lbl_data_test = get_test_data()
+    img_data_test, mean, std = normalize(img_data_test, mean=mean, std=std)
+    img_batches = np.split(img_data_test,
+                        img_data_test.shape[0]//batch_size,
+                        axis=0)
+    label_batches = np.split(lbl_data_test,
+                            lbl_data_test.shape[0]//batch_size,
+                            axis=0)
+    true_count = 0
+    total_count = 0
+    for no, img_batch in enumerate(img_batches):
+        img_batch = np.reshape(img_batch, [img_batch.shape[0], -1])
+        img_batch = np.expand_dims(img_batch, -1)
+        labels = label_batches[no]
 
-img_data_test, lbl_data_test = get_test_data()
-img_data_test, mean, std = normalize(img_data_test, mean=mean, std=std)
-img_batches = np.split(img_data_test,
-                       img_data_test.shape[0]//batch_size,
-                       axis=0)
-label_batches = np.split(lbl_data_test,
-                         lbl_data_test.shape[0]//batch_size,
-                         axis=0)
-true_count = 0
-total_count = 0
-for no, img_batch in enumerate(img_batches):
-    img_batch = np.reshape(img_batch, [img_batch.shape[0], -1])
-    img_batch = np.expand_dims(img_batch, -1)
-    labels = label_batches[no]
-
-    for b in range(batch_size):
-        x = img_batch
-        # forward pass
-        h1 = dense.forward(x)
-        h1_nl = act1.forward(h1)
-        h2 = dense2.forward(h1_nl)
-        h2_nl = act2.forward(h2)
-        h3 = dense3.forward(h2_nl)
-        y_hat = act3.forward(h3)
-        true = np.sum((labels == np.squeeze(np.argmax(y_hat, axis=1))
-                       ).astype(np.float32))
-        true_count += true
-        total_count += batch_size
-print('test accuracy', true_count/total_count)
-print('done!')
+        for b in range(batch_size):
+            x = img_batch
+            # forward pass
+            h1 = dense.forward(x)
+            h1_nl = act1.forward(h1)
+            h2 = dense2.forward(h1_nl)
+            h2_nl = act2.forward(h2)
+            h3 = dense3.forward(h2_nl)
+            y_hat = act3.forward(h3)
+            true = np.sum((labels == np.squeeze(np.argmax(y_hat, axis=1))
+                        ).astype(np.float32))
+            true_count += true
+            total_count += batch_size
+    print('test accuracy', true_count/total_count)
+    print('done!')

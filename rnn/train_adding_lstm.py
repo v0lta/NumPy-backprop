@@ -26,9 +26,10 @@ if __name__ == '__main__':
     assert len(train_x_lst) == len(train_y_lst)
 
     # initialize cell state.
-    c = cell.zero_state(batch_size)
-    h = cell.zero_state(batch_size)
+    fd = {'c': cell.zero_state(batch_size),
+          'h': cell.zero_state(batch_size)}
     loss_lst = []
+    fd_lst = []
     # train cell
     for i in range(iterations):
         x = train_x_lst[i]
@@ -37,58 +38,39 @@ if __name__ == '__main__':
         x = np.expand_dims(x, -1)
         y = np.expand_dims(y, -1)
 
-        out_lst = []
-        c_lst = []
-        h_lst = []
-        zbar_lst = []
-        ibar_lst = []
-        fbar_lst = []
-        obar_lst = []
+        out_dict_lst = []
         # forward
         for t in range(time_steps):
-            out, c, h, zbar, ibar, fbar, obar = \
-                cell.forward(x=x[t, :, :, :], c=c, h=h)
-            out_lst.append(out)
-            c_lst.append(c)
-            h_lst.append(h)
-            zbar_lst.append(zbar)
-            ibar_lst.append(ibar)
-            fbar_lst.append(fbar)
-            obar_lst.append(obar)
-        loss = cost.forward(y, out_lst[-1])
-        deltay = np.zeros((time_steps, batch_size, 1, 1))
-        deltay[-1, :, :, :] = cost.backward(y, out_lst[-1])
-        deltah = cell.zero_state(batch_size)
-        deltac = cell.zero_state(batch_size)
-        deltaz = cell.zero_state(batch_size)
-        deltao = cell.zero_state(batch_size)
-        deltai = cell.zero_state(batch_size)
-        deltaf = cell.zero_state(batch_size)
+            fd = cell.forward(x=x[t, :, :, :],
+                              c=fd['c'], h=fd['h'])
+            fd_lst.append(fd)
 
+        loss = cost.forward(y, fd_lst[-1]['y'])
+        deltay = np.zeros((time_steps, batch_size, 1, 1))
+        deltay[-1, :, :, :] = cost.backward(y, fd_lst[-1]['y'])
+
+        gd = {'deltah': cell.zero_state(batch_size),
+              'deltac': cell.zero_state(batch_size),
+              'deltaz': cell.zero_state(batch_size),
+              'deltao': cell.zero_state(batch_size),
+              'deltai': cell.zero_state(batch_size),
+              'deltaf': cell.zero_state(batch_size)}
+        gd_lst = []
         grad_lst = []
         # backward
         for t in reversed(range(time_steps)):
-            deltac, deltaz, deltao, deltai, deltaf, \
-                dWout, dbout, dWz, dWi, dWf, dWo, dRz, dRi,\
-                dRf, dRo, dbz, dbi, dbf, dbo,\
-                dpi, dpf, dpo = \
-                cell.backward(deltay=deltay[t, :, :, :],
-                              deltaz=deltaz,
-                              deltac=deltac,
-                              deltao=deltao,
-                              deltai=deltai,
-                              deltaf=deltaf,
-                              x=x[t, :, :, :],
-                              c=c_lst[t],
-                              h=h_lst[t],
-                              cm1=c_lst[t-1],
-                              zbar=zbar_lst[t],
-                              obar=obar_lst[t],
-                              ibar=ibar_lst[t],
-                              fbar=fbar_lst[t])
-            grad_lst.append([dWout, dbout, dWz, dWi, dWf,
-                             dWo, dRz, dRi, dRf, dRo, dbz,
-                             dbi, dbf, dbo, dpi, dpf, dpo])
+            # TODO: Finish me!
+            gd = cell.backward(deltay=deltay[t, :, :, :],
+                               fd=fd_lst[t],
+                               prev_fd=fd_lst[t-1],
+                               prev_gd=gd)
+            gd_lst.append(gd)
+            # TODO: Move elsewhere.
+            grad_lst.append([gd['dWout'], gd['dbout'],
+                             gd['dWz'], gd['dWi'], gd['dWf'], gd['dWo'],
+                             gd['dRz'], gd['dRi'], gd['dRf'], gd['dRo'],
+                             gd['dbz'], gd['dbi'], gd['dbf'], gd['dbo'],
+                             gd['dpi'], gd['dpf'], gd['dpo']])
         ldWout, ldbout, ldWz, ldWi, ldWf, ldWo, ldRz, ldRi,\
             ldRf, ldRo, ldbz, ldbi, ldbf, ldbo,\
             ldpi, ldpf, ldpo = zip(*grad_lst)
@@ -132,23 +114,23 @@ if __name__ == '__main__':
         dpo = np.clip(np.sum(dpo, axis=0), -1, 1)
 
         # update
-        cell.Wout += -lr*np.expand_dims(np.mean(dWout, 0), 0)
-        cell.bout += -lr*np.expand_dims(np.mean(dbout, 0), 0)
-        cell.Wz += -lr*np.expand_dims(np.mean(dWz, 0), 0)
-        cell.Wi += -lr*np.expand_dims(np.mean(dWi, 0), 0)
-        cell.Wf += -lr*np.expand_dims(np.mean(dWf, 0), 0)
-        cell.Wo += -lr*np.expand_dims(np.mean(dWo, 0), 0)
-        cell.Rz += -lr*np.expand_dims(np.mean(dRz, 0), 0)
-        cell.Ri += -lr*np.expand_dims(np.mean(dRi, 0), 0)
-        cell.Rf += -lr*np.expand_dims(np.mean(dRf, 0), 0)
-        cell.Ro += -lr*np.expand_dims(np.mean(dRo, 0), 0)
-        cell.bz += -lr*np.expand_dims(np.mean(dbz, 0), 0)
-        cell.bi += -lr*np.expand_dims(np.mean(dbi, 0), 0)
-        cell.bf += -lr*np.expand_dims(np.mean(dbf, 0), 0)
-        cell.bo += -lr*np.expand_dims(np.mean(dbo, 0), 0)
-        cell.pi += -lr*np.expand_dims(np.mean(dpi, 0), 0)
-        cell.pf += -lr*np.expand_dims(np.mean(dpf, 0), 0)
-        cell.po += -lr*np.expand_dims(np.mean(dpo, 0), 0)
+        cell.weights['Wout'] += -lr*np.expand_dims(np.mean(dWout, 0), 0)
+        cell.weights['bout'] += -lr*np.expand_dims(np.mean(dbout, 0), 0)
+        cell.weights['Wz'] += -lr*np.expand_dims(np.mean(dWz, 0), 0)
+        cell.weights['Wi'] += -lr*np.expand_dims(np.mean(dWi, 0), 0)
+        cell.weights['Wf'] += -lr*np.expand_dims(np.mean(dWf, 0), 0)
+        cell.weights['Wo'] += -lr*np.expand_dims(np.mean(dWo, 0), 0)
+        cell.weights['Rz'] += -lr*np.expand_dims(np.mean(dRz, 0), 0)
+        cell.weights['Ri'] += -lr*np.expand_dims(np.mean(dRi, 0), 0)
+        cell.weights['Rf'] += -lr*np.expand_dims(np.mean(dRf, 0), 0)
+        cell.weights['Ro'] += -lr*np.expand_dims(np.mean(dRo, 0), 0)
+        cell.weights['bz'] += -lr*np.expand_dims(np.mean(dbz, 0), 0)
+        cell.weights['bi'] += -lr*np.expand_dims(np.mean(dbi, 0), 0)
+        cell.weights['bf'] += -lr*np.expand_dims(np.mean(dbf, 0), 0)
+        cell.weights['bo'] += -lr*np.expand_dims(np.mean(dbo, 0), 0)
+        cell.weights['pi'] += -lr*np.expand_dims(np.mean(dpi, 0), 0)
+        cell.weights['pf'] += -lr*np.expand_dims(np.mean(dpf, 0), 0)
+        cell.weights['po'] += -lr*np.expand_dims(np.mean(dpo, 0), 0)
 
         if i % 10 == 0:
             print(i, 'loss', "%.4f" % loss, 'baseline', baseline,

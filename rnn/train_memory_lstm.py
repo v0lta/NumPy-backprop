@@ -1,6 +1,7 @@
 # Created by moritz (wolter@cs.uni-bonn.de)
 # This script trains a long short term memory cell on the
 # memory problem.
+# TODO: fixme.
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -19,15 +20,14 @@ if __name__ == '__main__':
     # --- baseline ----------------------
     baseline = np.log(8) * 10/(time_steps + 20)
     print("Baseline is " + str(baseline))
-    batch_size = 25
-    lr = 0.001
+    batch_size = 50
+    lr = 0.00005
     cell = LSTMcell(hidden_size=64, input_size=10, output_size=output_size)
     sigmoid = Sigmoid()
 
     cost = CrossEntropyCost()
 
     train_x, train_y = generate_data_memory(time_steps, n_train, n_sequence)
-
     train_x_lst = np.array_split(train_x, n_train//batch_size, axis=0)
     train_y_lst = np.array_split(train_y, n_train//batch_size, axis=0)
 

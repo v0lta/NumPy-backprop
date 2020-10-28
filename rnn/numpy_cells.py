@@ -5,28 +5,10 @@
 # see also https://arxiv.org/pdf/1503.04069.pdf
 
 import numpy as np
-
-
-class MSELoss(object):
-    ''' Mean squared error loss function. '''
-    def forward(self, label, out):
-        diff = out - label
-        return np.mean(diff*diff)
-
-    def backward(self, label, out):
-        return out - label
-
-
-class CrossEntropyCost(object):
-
-    def forward(self, label, out):
-        return  -np.mean(np.nan_to_num(label*np.log(out)
-                                       +(1-label)*np.log(1-out)))
-
-    def backward(self, label, out):
-        """ Assuming a sigmoidal netwok output."""
-        return out-label
-
+import sys
+sys.path.append("./feedforward/")
+from numpy_layer import DenseLayer, MSELoss, CrossEntropyCost
+from numpy_layer import Sigmoid
 
 class Tanh(object):
     """ Hyperbolic tangent activation function. """
@@ -38,22 +20,6 @@ class Tanh(object):
 
     def prime(self, inputs):
         return (1. - np.tanh(inputs)*np.tanh(inputs))
-
-
-class Sigmoid(object):
-    """ Sigmoid activation function. """
-    def sigmoid(self, inputs):
-        sig = np.exp(inputs)/(1 + np.exp(inputs))
-        return np.nan_to_num(sig)
-
-    def forward(self, inputs):
-        return self.sigmoid(inputs)
-
-    def backward(self, inputs, delta):
-        return self.sigmoid(inputs)*(1 - self.sigmoid(inputs))*delta
-
-    def prime(self, inputs):
-        return self.sigmoid(inputs)*(1 - self.sigmoid(inputs))
 
 
 class BasicCell(object):
@@ -143,24 +109,25 @@ class LSTMcell(object):
         self.hidden_size = hidden_size
         # create the weights
         s = 1./np.sqrt(hidden_size)
-        self.Wz = np.random.randn(1, hidden_size, input_size)*s
-        self.Wi = np.random.randn(1, hidden_size, input_size)*s
-        self.Wf = np.random.randn(1, hidden_size, input_size)*s
-        self.Wo = np.random.randn(1, hidden_size, input_size)*s
+        self.weights = {}
+        self.weights['Wz'] = np.random.randn(1, hidden_size, input_size)*s
+        self.weights['Wi'] = np.random.randn(1, hidden_size, input_size)*s
+        self.weights['Wf'] = np.random.randn(1, hidden_size, input_size)*s
+        self.weights['Wo'] = np.random.randn(1, hidden_size, input_size)*s
 
-        self.Rz = np.random.randn(1, hidden_size, hidden_size)*s
-        self.Ri = np.random.randn(1, hidden_size, hidden_size)*s
-        self.Rf = np.random.randn(1, hidden_size, hidden_size)*s
-        self.Ro = np.random.randn(1, hidden_size, hidden_size)*s
+        self.weights['Rz'] = np.random.randn(1, hidden_size, hidden_size)*s
+        self.weights['Ri'] = np.random.randn(1, hidden_size, hidden_size)*s
+        self.weights['Rf'] = np.random.randn(1, hidden_size, hidden_size)*s
+        self.weights['Ro'] = np.random.randn(1, hidden_size, hidden_size)*s
 
-        self.bz = np.zeros((1, hidden_size, 1))*s
-        self.bi = np.random.randn(1, hidden_size, 1)*s
-        self.bf = np.random.randn(1, hidden_size, 1)*s
-        self.bo = np.random.randn(1, hidden_size, 1)*s
+        self.weights['bz'] = np.zeros((1, hidden_size, 1))*s
+        self.weights['bi'] = np.random.randn(1, hidden_size, 1)*s
+        self.weights['bf'] = np.random.randn(1, hidden_size, 1)*s
+        self.weights['bo'] = np.random.randn(1, hidden_size, 1)*s
 
-        self.pi = np.random.randn(1, hidden_size, 1)*s
-        self.pf = np.random.randn(1, hidden_size, 1)*s
-        self.po = np.random.randn(1, hidden_size, 1)*s
+        self.weights['pi'] = np.random.randn(1, hidden_size, 1)*s
+        self.weights['pf'] = np.random.randn(1, hidden_size, 1)*s
+        self.weights['po'] = np.random.randn(1, hidden_size, 1)*s
 
         self.state_activation = Tanh()
         self.out_activation = Tanh()
@@ -168,14 +135,14 @@ class LSTMcell(object):
         self.gate_f_act = Sigmoid()
         self.gate_o_act = Sigmoid()
 
-        self.Wout = np.random.randn(1, output_size, hidden_size)*s
-        self.bout = np.random.randn(1, output_size, 1)
+        self.weights['Wout'] = np.random.randn(1, output_size, hidden_size)*s
+        self.weights['bout'] = np.random.randn(1, output_size, 1)
 
     def zero_state(self, batch_size):
         return np.zeros((batch_size, self.hidden_size, 1))
 
-    def forward(self, x, h, c):
-        """LSTM forward pass
+    def forward(self, x, h, c) -> {}:
+        """ Implementation of the LSTM forward pass.
 
         Args:
             x (np.array): Array containing the current inputs..
@@ -183,88 +150,125 @@ class LSTMcell(object):
             c (np.array): Cell state.
 
         Returns:
-            y (np.array): Projected cell output.
-            c (np.array): Cell memory state
-            h (np.array): Gated output vector.
-            zbar (np.array): Pre-activation block input.
-            ibar (np.array): Pre-activation input gate vector.
-            fbar (np.array): Pre-activation forget gate vector.
-            obar (np.array): Pre-activation output gate vector.
+            A dictionary containing:
+                y (np.array): Projected cell output.
+                c (np.array): Cell memory state
+                h (np.array): Gated output vector.
+                zbar (np.array): Pre-activation block input.
+                z    (np.array): Block input vector.
+                ibar (np.array): Pre-activation input gate vector.
+                i    (np.array): Input gate vector.
+                fbar (np.array): Pre-activation forget gate vector.
+                f    (np.array): Forget gate vector. 
+                obar (np.array): Pre-activation output gate vector.
+                o    (np.array): Output gate vector.
+                x    (np.array): Input used to evaluate the cell.
         """
         # block input
-        zbar = np.matmul(self.Wz, x) + np.matmul(self.Rz, h) + self.bz
+        zbar = np.matmul(self.weights['Wz'], x) \
+                         + np.matmul(self.weights['Rz'], h) \
+                         + self.weights['bz']
         z = self.state_activation.forward(zbar)
         # input gate
-        ibar = np.matmul(self.Wi, x) + np.matmul(self.Ri, h) + self.pi*c \
-            + self.bi
+        ibar = np.matmul(self.weights['Wi'], x) \
+               + np.matmul(self.weights['Ri'], h) \
+               + self.weights['pi']*c \
+               + self.weights['bi']
         i = self.gate_i_act.forward(ibar)
         # forget gate
-        fbar = np.matmul(self.Wf, x) + np.matmul(self.Rf, h) + self.pf*c \
-            + self.bf
+        fbar = np.matmul(self.weights['Wf'], x) \
+               + np.matmul(self.weights['Rf'], h) \
+               + self.weights['pf']*c \
+               + self.weights['bf']
         f = self.gate_f_act.forward(fbar)
         # cell
         c = z * i + c * f
         # output gate
-        obar = np.matmul(self.Wo, x) + np.matmul(self.Ro, h) + self.po*c \
-            + self.bo
+        obar = np.matmul(self.weights['Wo'], x) \
+             + np.matmul(self.weights['Ro'], h) \
+             + self.weights['po']*c \
+             + self.weights['bo']
         o = self.gate_o_act.forward(obar)
         # block output
         h = self.out_activation.forward(c)*o
         # linear projection
-        y = np.matmul(self.Wout, h) + self.bout
-        return y, c, h, zbar, ibar, fbar, obar
+        y = np.matmul(self.weights['Wout'], h) + self.weights['bout']
+        return {'y': y, 'c': c, 'h': h, 'zbar': zbar, 'z': z, 
+                'ibar': ibar, 'i': i,  'fbar': fbar, 'f': f,
+                'obar': obar, 'o': o, 'x': x}
 
-    def backward(self, x, h, zbar, ibar, fbar, obar, c, cm1,
-                 deltay, deltaz, deltac, deltao, deltai, deltaf):
+    def backward(self, deltay, fd, prev_fd, prev_gd) -> {}:
+        """ As described in https://arxiv.org/pdf/1503.04069.pdf section B.
+
+        Args:
+            fd (dict): Fowrad dictionary recording the forward pass values.
+            prev_fd (dict): Dictionary at time t+1.
+            prev_gd (dict): Previous gradients at time t+1.
+
+        Returns:
+            A dictionary with the gradients at time t.
+        """
         # projection backward
-        dWout = np.matmul(deltay, np.transpose(h, [0, 2, 1]))
+        dWout = np.matmul(deltay,
+                          np.transpose(fd['h'], [0, 2, 1]))
         dbout = 1*deltay
-        deltay = np.matmul(np.transpose(self.Wout, [0, 2, 1]), deltay)
+        deltay = np.matmul(np.transpose(self.weights['Wout'], [0, 2, 1]),
+                           deltay)
 
         # block backward
         deltah = deltay \
-            + np.matmul(np.transpose(self.Rz, [0, 2, 1]), deltaz) \
-            + np.matmul(np.transpose(self.Ri, [0, 2, 1]), deltai) \
-            + np.matmul(np.transpose(self.Rf, [0, 2, 1]), deltaf) \
-            + np.matmul(np.transpose(self.Ro, [0, 2, 1]), deltao)
+            + np.matmul(np.transpose(self.weights['Rz'], [0, 2, 1]),
+                        prev_gd['deltaz']) \
+            + np.matmul(np.transpose(self.weights['Ri'], [0, 2, 1]),
+                        prev_gd['deltai']) \
+            + np.matmul(np.transpose(self.weights['Rf'], [0, 2, 1]),
+                        prev_gd['deltaf']) \
+            + np.matmul(np.transpose(self.weights['Ro'], [0, 2, 1]),
+                        prev_gd['deltao'])
 
-        deltao = deltah * self.out_activation.forward(c)\
-            * self.gate_o_act.prime(obar)
-        deltac = deltah * self.gate_o_act.forward(obar)\
-            * self.state_activation.prime(c)\
-            + self.po*deltao \
-            + self.pi*deltai \
-            + self.pf*deltaf \
-            + deltac*self.gate_f_act.forward(fbar)
-        deltaf = deltac * cm1 * self.gate_f_act.prime(fbar)
-        deltai = deltac * self.state_activation.forward(zbar)
-        deltaz = deltac*self.gate_i_act.forward(ibar)\
-            * self.state_activation.prime(zbar)
+        deltao = deltah * fd['c'] * self.gate_o_act.prime(fd['obar'])
+        deltac = deltah * fd['o'] * self.state_activation.prime(fd['c'])\
+            + self.weights['po']*deltao \
+            + self.weights['pi']*prev_gd['deltai'] \
+            + self.weights['pf']*prev_gd['deltaf'] \
+            + prev_gd['deltac']*prev_fd['f']
+        deltaf = deltac * prev_fd['c'] * self.gate_f_act.prime(fd['fbar'])
+        deltai = deltac * fd['z'] * self.gate_i_act.prime(fd['ibar'])
+        deltaz = deltac * fd['i'] * self.state_activation.prime(fd['zbar'])
 
         # weight backward
-        dWz = np.matmul(deltaz, np.transpose(x, [0, 2, 1]))
-        dWi = np.matmul(deltai, np.transpose(x, [0, 2, 1]))
-        dWf = np.matmul(deltaf, np.transpose(x, [0, 2, 1]))
-        dWo = np.matmul(deltao, np.transpose(x, [0, 2, 1]))
+        dWz = np.matmul(deltaz, np.transpose(fd['x'], [0, 2, 1]))
+        dWi = np.matmul(deltai, np.transpose(fd['x'], [0, 2, 1]))
+        dWf = np.matmul(deltaf, np.transpose(fd['x'], [0, 2, 1]))
+        dWo = np.matmul(deltao, np.transpose(fd['x'], [0, 2, 1]))
 
-        dRz = np.matmul(deltaz, np.transpose(h, [0, 2, 1]))
-        dRi = np.matmul(deltai, np.transpose(h, [0, 2, 1]))
-        dRf = np.matmul(deltaf, np.transpose(h, [0, 2, 1]))
-        dRo = np.matmul(deltao, np.transpose(h, [0, 2, 1]))
+        # Compute recurrent weight gradients.
+        dRz = np.matmul(prev_gd['deltaz'], np.transpose(fd['h'], [0, 2, 1]))
+        dRi = np.matmul(prev_gd['deltai'], np.transpose(fd['h'], [0, 2, 1]))
+        dRf = np.matmul(prev_gd['deltaf'], np.transpose(fd['h'], [0, 2, 1]))
+        dRo = np.matmul(prev_gd['deltao'], np.transpose(fd['h'], [0, 2, 1]))
 
         dbz = deltaz
         dbi = deltai
         dbf = deltaf
         dbo = deltao
 
-        dpi = c*deltai
-        dpf = c*deltaf
-        dpo = c*deltao
+        dpi = fd['c']*deltai
+        dpf = fd['c']*deltaf
+        dpo = fd['c']*deltao
 
-        return deltac, deltaz, deltao, deltai, deltaf, \
-            dWout, dbout, dWz, dWi, dWf, dWo, dRz, dRi,\
-            dRf, dRo, dbz, dbi, dbf, dbo,\
-            dpi, dpf, dpo
+        return {'deltac': deltac, 'deltaz': deltaz, 'deltao': deltao,
+                'deltai': deltai, 'deltaf': deltaf, 
+                'dWout': dWout, 'dbout': dbout,
+                'dWz': dWz, 'dWi': dWi, 'dWf': dWf, 'dWo': dWo,
+                'dRz': dRz, 'dRi': dRi, 'dRf': dRf, 'dRo': dRo,
+                'dbz': dbz, 'dbi': dbi, 'dbf': dbf, 'dbo': dbo,
+                'dpi': dpi, 'dpf': dpf, 'dpo': dpo}
+
+
+    def update(self):
+        """ Compute a SGD update step. """
+        pass
 
 
 class GRU(object):
@@ -313,12 +317,17 @@ class GRU(object):
             h (np.array): Current cell state [batch_size, hidden_dim, 1]
 
         Returns:
-            y (np.array): Current output
-            hnew (np.array): Current cell state
-            zbar (np.array): Pre-activation state candidate values.
-            hbar (np.array): Pre-activation block input.
-            rbar (np.array): Pre-activation reset-gate input.
-            ubar (np.array): Pre-activation update-gate input.
+            A dictionary containing:
+                y (np.array): Current output
+                hnew (np.array): Current cell state
+                zbar (np.array): Pre-activation state candidate values.
+                z    (np.array): State candidate values
+                hbar (np.array): Pre-activation block input.
+                h    (np.array): Block input.
+                rbar (np.array): Pre-activation reset-gate input.
+                r    (np.array): Reset gate output vector
+                ubar (np.array): Pre-activation update-gate input.
+                u    (np.array): Update-gate output vector.
         """
         # reset gate
         rbar = np.matmul(self.Vr, x) + np.matmul(self.Wr, h) + self.br
@@ -394,6 +403,7 @@ class GRU(object):
         dVu = np.matmul(deltau, np.transpose(x, [0, 2, 1]))
         dVr = np.matmul(deltar, np.transpose(x, [0, 2, 1]))
 
+        # bug! Fix me!
         dW = np.matmul(deltaz, np.transpose(h, [0, 2, 1]))
         dWu = np.matmul(deltau, np.transpose(h, [0, 2, 1]))
         dWr = np.matmul(deltar, np.transpose(h, [0, 2, 1]))

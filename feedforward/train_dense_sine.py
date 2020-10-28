@@ -23,7 +23,6 @@ mse = MSELoss()
 batch_size = 5
 iterations = 10000//batch_size
 
-
 plt.plot(np.squeeze(x), np.squeeze(y))
 plt.plot(np.squeeze(x),
          np.squeeze(dense2.forward(act.forward(dense.forward(x)))))
@@ -51,15 +50,15 @@ for i in range(iterations):
 
     # backward
     dl = mse.backward(y, y_hat)
-    dw2, dx2, db2 = dense2.backward(inputs=h_nl, prev_grad=dl)
-    dx2 = act.backward(inputs=h, prev_dev=dx2)
-    dw, dx, db = dense.backward(inputs=x, prev_grad=dx2)
+    grad_dense2 = dense2.backward(inputs=h_nl, delta=dl)
+    dx2 = act.backward(inputs=h, delta=grad_dense2['x'])
+    grad_dense = dense.backward(inputs=x, delta=dx2)
 
     # update
-    dense.weight += -lr*np.mean(dw, axis=0)
-    dense.bias += -lr*np.mean(db, axis=0)
-    dense2.weight += -lr*np.mean(dw2, axis=0)
-    dense2.bias += -lr*np.mean(db2, axis=0)
+    dense.weights['W'] += -lr*np.mean(grad_dense['W'], axis=0)
+    dense.weights['b'] += -lr*np.mean(grad_dense['b'], axis=0)
+    dense2.weights['W'] += -lr*np.mean(grad_dense2['W'], axis=0)
+    dense2.weights['b'] += -lr*np.mean(grad_dense2['b'], axis=0)
     if i % 100 == 0:
         print(i, loss)
 
