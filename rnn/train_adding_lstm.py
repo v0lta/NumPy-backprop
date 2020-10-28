@@ -13,7 +13,7 @@ if __name__ == '__main__':
     baseline = 0.167
     time_steps = 30
     batch_size = 25
-    lr = 0.1
+    lr = 0.01
     cell = LSTMcell(hidden_size=64, input_size=2)
     cost = MSELoss()
 
@@ -71,8 +71,10 @@ if __name__ == '__main__':
                              gd['dRz'], gd['dRi'], gd['dRf'], gd['dRo'],
                              gd['dbz'], gd['dbi'], gd['dbf'], gd['dbo'],
                              gd['dpi'], gd['dpf'], gd['dpo']])
-        ldWout, ldbout, ldWz, ldWi, ldWf, ldWo, ldRz, ldRi,\
-            ldRf, ldRo, ldbz, ldbi, ldbf, ldbo,\
+        ldWout, ldbout,\
+            ldWz, ldWi, ldWf, ldWo, \
+            ldRz, ldRi, ldRf, ldRo, \
+            ldbz, ldbi, ldbf, ldbo,\
             ldpi, ldpf, ldpo = zip(*grad_lst)
         dWout = np.stack(ldWout, axis=0)
         dbout = np.stack(ldbout, axis=0)
@@ -139,14 +141,14 @@ if __name__ == '__main__':
         loss_lst.append(loss)
 
         if i % 1000 == 0 and i > 0:
-            lr = lr * 0.90
+            lr = lr * 0.95
 
     # 0th batch marked inputs
     print(x[x[:, 0, 1, 0] == 1., 0, 0, 0])
     # desired output for all batches
     print(y[:, 0, 0])
     # network output for all batches
-    print(out[:, 0, 0])
+    print(fd['y'][:, 0, 0])
     plt.semilogy(loss_lst)
     plt.title('loss')
     plt.xlabel('weight updates')
