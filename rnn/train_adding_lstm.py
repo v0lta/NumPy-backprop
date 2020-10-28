@@ -8,11 +8,11 @@ from generate_adding_memory import generate_data_adding
 from numpy_cells import LSTMcell, MSELoss
 
 if __name__ == '__main__':
-    n_train = int(9e5)
+    n_train = int(10e5)
     n_test = int(1e4)
     baseline = 0.167
-    time_steps = 30
-    batch_size = 250
+    time_steps = 50
+    batch_size = 100
     lr = 1.0
     cell = LSTMcell(hidden_size=64, input_size=2)
     cost = MSELoss()
@@ -39,7 +39,6 @@ if __name__ == '__main__':
         x = np.expand_dims(x, -1)
         y = np.expand_dims(y, -1)
 
-        out_dict_lst = []
         fd_lst = []
         # forward
         for t in range(time_steps):
@@ -61,7 +60,6 @@ if __name__ == '__main__':
         grad_lst = []
         # backward
         for t in reversed(range(time_steps)):
-            # TODO: Finish me!
             gd = cell.backward(deltay=deltay[t, :, :, :],
                                fd=fd_lst[t],
                                prev_fd=fd_lst[t-1],
@@ -142,18 +140,18 @@ if __name__ == '__main__':
                   'done', "%.3f" % (i/iterations))
         loss_lst.append(loss)
 
-        if i % 250 == 0 and i > 0:
+        if i % 500 == 0 and i > 0:
             lr = lr * 0.95
         lr_lst.append(lr)
 
     # 0th batch marked inputs
     print(x[x[:, 0, 1, 0] == 1., 0, 0, 0])
     # desired output for all batches
-    print(y[:, 0, 0])
+    print(y[:10, 0, 0])
     # network output for all batches
-    print(fd['y'][:, 0, 0])
+    print(fd['y'][:10, 0, 0])
     plt.semilogy(loss_lst)
-    plt.title('loss')
+    plt.title('loss lstm')
     plt.xlabel('weight updates')
     plt.ylabel('mean squared error')
     plt.show()

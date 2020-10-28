@@ -12,11 +12,8 @@ layers on the MNIST digit recognition problem.
 The ```rnn``` folder contains recurrent neural networks and code to train them
 on the adding problem.
 
-The ```rummelhard``` folder revisits the symmetry detection problem from
-the original paper on backpropagation.
-
 The source code in this repository runs using NumPy versions >= 1.18.1
-and should run on any mid to top range CPU.
+and should run reasonably well on any mid to top range CPU.
 
 The the rnn folder is work in progress.
 

@@ -125,11 +125,11 @@ if __name__ == '__main__':
     img_data_test, lbl_data_test = get_test_data()
     img_data_test, mean, std = normalize(img_data_test, mean=mean, std=std)
     img_batches = np.split(img_data_test,
-                        img_data_test.shape[0]//batch_size,
-                        axis=0)
+                           img_data_test.shape[0]//batch_size,
+                           axis=0)
     label_batches = np.split(lbl_data_test,
-                            lbl_data_test.shape[0]//batch_size,
-                            axis=0)
+                             lbl_data_test.shape[0]//batch_size,
+                             axis=0)
     true_count = 0
     total_count = 0
     for no, img_batch in enumerate(img_batches):
@@ -147,7 +147,7 @@ if __name__ == '__main__':
             h3 = dense3.forward(h2_nl)
             y_hat = act3.forward(h3)
             true = np.sum((labels == np.squeeze(np.argmax(y_hat, axis=1))
-                        ).astype(np.float32))
+                           ).astype(np.float32))
             true_count += true
             total_count += batch_size
     print('test accuracy', true_count/total_count)

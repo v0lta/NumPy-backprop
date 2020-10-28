@@ -56,7 +56,7 @@ class BasicCell(object):
         Returns:
             y (np.array): Cell output.
             h (np.array): Updated cell state.
-        """        
+        """
         h = np.matmul(self.Whh, h) + np.matmul(self.Wxh, x) + self.bh
         h = self.activation.forward(h)
         y = np.matmul(self.Why, h) + self.by
@@ -159,41 +159,41 @@ class LSTMcell(object):
                 ibar (np.array): Pre-activation input gate vector.
                 i    (np.array): Input gate vector.
                 fbar (np.array): Pre-activation forget gate vector.
-                f    (np.array): Forget gate vector. 
+                f    (np.array): Forget gate vector.
                 obar (np.array): Pre-activation output gate vector.
                 o    (np.array): Output gate vector.
                 x    (np.array): Input used to evaluate the cell.
         """
         # block input
         zbar = np.matmul(self.weights['Wz'], x) \
-                         + np.matmul(self.weights['Rz'], h) \
-                         + self.weights['bz']
+            + np.matmul(self.weights['Rz'], h) \
+            + self.weights['bz']
         z = self.state_activation.forward(zbar)
         # input gate
         ibar = np.matmul(self.weights['Wi'], x) \
-               + np.matmul(self.weights['Ri'], h) \
-               + self.weights['pi']*c \
-               + self.weights['bi']
+            + np.matmul(self.weights['Ri'], h) \
+            + self.weights['pi']*c \
+            + self.weights['bi']
         i = self.gate_i_act.forward(ibar)
         # forget gate
         fbar = np.matmul(self.weights['Wf'], x) \
-               + np.matmul(self.weights['Rf'], h) \
-               + self.weights['pf']*c \
-               + self.weights['bf']
+            + np.matmul(self.weights['Rf'], h) \
+            + self.weights['pf']*c \
+            + self.weights['bf']
         f = self.gate_f_act.forward(fbar)
         # cell
         c = z * i + c * f
         # output gate
         obar = np.matmul(self.weights['Wo'], x) \
-             + np.matmul(self.weights['Ro'], h) \
-             + self.weights['po']*c \
-             + self.weights['bo']
+            + np.matmul(self.weights['Ro'], h) \
+            + self.weights['po']*c \
+            + self.weights['bo']
         o = self.gate_o_act.forward(obar)
         # block output
         h = self.out_activation.forward(c)*o
         # linear projection
         y = np.matmul(self.weights['Wout'], h) + self.weights['bout']
-        return {'y': y, 'c': c, 'h': h, 'zbar': zbar, 'z': z, 
+        return {'y': y, 'c': c, 'h': h, 'zbar': zbar, 'z': z,
                 'ibar': ibar, 'i': i,  'fbar': fbar, 'f': f,
                 'obar': obar, 'o': o, 'x': x}
 
@@ -201,7 +201,8 @@ class LSTMcell(object):
         """ As described in https://arxiv.org/pdf/1503.04069.pdf section B.
 
         Args:
-            fd (dict): Fowrad dictionary recording the forward pass values.
+            deltay (np.array): Gradients from the layer above.
+            fd (dict): Forward dictionary recording the forward pass values.
             prev_fd (dict): Dictionary at time t+1.
             prev_gd (dict): Previous gradients at time t+1.
 
@@ -258,13 +259,12 @@ class LSTMcell(object):
         dpo = fd['c']*deltao
 
         return {'deltac': deltac, 'deltaz': deltaz, 'deltao': deltao,
-                'deltai': deltai, 'deltaf': deltaf, 
+                'deltai': deltai, 'deltaf': deltaf,
                 'dWout': dWout, 'dbout': dbout,
                 'dWz': dWz, 'dWi': dWi, 'dWf': dWf, 'dWo': dWo,
                 'dRz': dRz, 'dRi': dRi, 'dRf': dRf, 'dRo': dRo,
                 'dbz': dbz, 'dbi': dbi, 'dbf': dbf, 'dbo': dbo,
                 'dpi': dpi, 'dpf': dpf, 'dpo': dpo}
-
 
     def update(self):
         """ Compute a SGD update step. """
@@ -286,25 +286,26 @@ class GRU(object):
         self.hidden_size = hidden_size
         # create the weights
         s = 1./np.sqrt(hidden_size)
-        self.Vr = np.random.randn(1, hidden_size, input_size)*s
-        self.Vu = np.random.randn(1, hidden_size, input_size)*s
-        self.V = np.random.randn(1, hidden_size, input_size)*s
+        self.weights = {}
+        self.weights['Vr'] = np.random.randn(1, hidden_size, input_size)*s
+        self.weights['Vu'] = np.random.randn(1, hidden_size, input_size)*s
+        self.weights['V'] = np.random.randn(1, hidden_size, input_size)*s
 
-        self.Wr = np.random.randn(1, hidden_size, hidden_size)*s
-        self.Wu = np.random.randn(1, hidden_size, hidden_size)*s
-        self.W = np.random.randn(1, hidden_size, hidden_size)*s
+        self.weights['Wr'] = np.random.randn(1, hidden_size, hidden_size)*s
+        self.weights['Wu'] = np.random.randn(1, hidden_size, hidden_size)*s
+        self.weights['W'] = np.random.randn(1, hidden_size, hidden_size)*s
 
-        self.br = np.zeros((1, hidden_size, 1))*s
-        self.bu = np.random.randn(1, hidden_size, 1)*s
-        self.b = np.random.randn(1, hidden_size, 1)*s
+        self.weights['br'] = np.zeros((1, hidden_size, 1))*s
+        self.weights['bu'] = np.random.randn(1, hidden_size, 1)*s
+        self.weights['b'] = np.random.randn(1, hidden_size, 1)*s
 
         self.state_activation = Tanh()
-        self.out_activation = Tanh()
+        # self.out_activation = Tanh()
         self.gate_r_act = Sigmoid()
         self.gate_u_act = Sigmoid()
 
-        self.Wout = np.random.randn(1, output_size, hidden_size)*s
-        self.bout = np.random.randn(1, output_size, 1)
+        self.weights['Wout'] = np.random.randn(1, output_size, hidden_size)*s
+        self.weights['bout'] = np.random.randn(1, output_size, 1)
 
     def zero_state(self, batch_size):
         return np.zeros((batch_size, self.hidden_size, 1))
@@ -318,8 +319,8 @@ class GRU(object):
 
         Returns:
             A dictionary containing:
-                y (np.array): Current output
-                hnew (np.array): Current cell state
+                y    (np.array): Current output
+                h    (np.array): Current cell state
                 zbar (np.array): Pre-activation state candidate values.
                 z    (np.array): State candidate values
                 hbar (np.array): Pre-activation block input.
@@ -330,88 +331,94 @@ class GRU(object):
                 u    (np.array): Update-gate output vector.
         """
         # reset gate
-        rbar = np.matmul(self.Vr, x) + np.matmul(self.Wr, h) + self.br
+        rbar = np.matmul(self.weights['Vr'], x) \
+            + np.matmul(self.weights['Wr'], h) \
+            + self.weights['br']
         r = self.gate_r_act.forward(rbar)
         # update gate
-        ubar = np.matmul(self.Vu, x) + np.matmul(self.Wu, h) + self.b
+        ubar = np.matmul(self.weights['Vu'], x) \
+            + np.matmul(self.weights['Wu'], h) \
+            + self.weights['b']
         u = self.gate_u_act.forward(ubar)
         # block input
         hbar = r*h
-        zbar = np.matmul(self.V, x) + np.matmul(self.W, hbar) + self.b
+        zbar = np.matmul(self.weights['V'], x) \
+            + np.matmul(self.weights['W'], hbar) \
+            + self.weights['b']
         z = self.state_activation.forward(zbar)
         # recurrent update
-        hnew = u*z + (1 - u)*h
+        h = u*z + (1 - u)*h
         # linear projection
-        y = np.matmul(self.Wout, h) + self.bout
-        return y, hnew, zbar, hbar, rbar, ubar
+        y = np.matmul(self.weights['Wout'], h) + self.weights['bout']
+        return {'y': y, 'x': x,
+                'hbar': hbar, 'h': h,
+                'zbar': zbar, 'z': z,
+                'rbar': rbar, 'r': r,
+                'ubar': ubar, 'u': u}
 
-    def backward(self, x, h, hm1, zbar, ubar, rbar,
-                 deltay, deltaz, deltah, deltau, deltar):
+    def backward(self, deltay, fd, prev_fd, prev_gd):
         """Gated recurrent unit backward pass.
 
         Args:
-            x (np.array): Input at current time step.
-            h (np.array): Cell state at current time step.
-            hm1 (np.array): Cell state at previous time step.
-            zbar (np.array): Pre-activation state candidate values.
-            rbar (np.array): Pre-activation reset-gate input.
-            ubar (np.array): Pre-activation update-gate input.
-            deltay (np.array): Gradient from above.
-            deltaz (np.array): State candidate gradients.
-            deltah (np.array): Block gradients.
-            deltau (np.array): Update gate gradients.
-            deltar (np.array): Reset gate gradients.
+            deltay (np.array): Gradients at t from the layer above.
+            fd (dict): Forward dictionary recording the forward pass values.
+            prev_fd (dict): Dictionary at time t+1.
+            prev_gd (dict): Previous gradients at time t+1.
 
         Returns:
-            deltahn: New recurrent gradients.
-            deltaz: State candidate gradients.
-            deltau: Update gate gradients.
-            deltar: Reset gate gradients.
-            dWout: Output projection weight matrix gradients.
-            dbout: Output projection bias gadients.
-            dW: State candidate input matrix gradients.
-            dWu: Update gate input matrix gradients.
-            dWr: Reset gate input matrix gradients.
-            dV: State candidate recurrent matrix gradients.
-            dVu: Update gate recurrent matrix gradients.
-            dVr: Reset gate recurrent matrix gradients.
-            db: State candidate bias gradients.
-            dbu: Update gate bias gradients.
-            dbr: Reset gate bias gradients.
+            A dict with:
+                deltah: New recurrent gradients.
+                deltaz: State candidate gradients.
+                deltau: Update gate gradients.
+                deltar: Reset gate gradients.
+                dWout: Output projection weight matrix gradients.
+                dbout: Output projection bias gadients.
+                dW: State candidate input matrix gradients.
+                dWu: Update gate input matrix gradients.
+                dWr: Reset gate input matrix gradients.
+                dV: State candidate recurrent matrix gradients.
+                dVu: Update gate recurrent matrix gradients.
+                dVr: Reset gate recurrent matrix gradients.
+                db: State candidate bias gradients.
+                dbu: Update gate bias gradients.
+                dbr: Reset gate bias gradients.
         """
         # projection backward
-        dWout = np.matmul(deltay, np.transpose(h, [0, 2, 1]))
+        dWout = np.matmul(deltay, np.transpose(fd['h'], [0, 2, 1]))
         dbout = 1*deltay
-        deltay = np.matmul(np.transpose(self.Wout, [0, 2, 1]), deltay)
+        deltay = np.matmul(np.transpose(self.weights['Wout'], [0, 2, 1]),
+                           deltay)
 
         # block backward
-        wtdz = np.matmul(np.transpose(self.W, [0, 2, 1]), deltaz)
-        deltahn = deltay \
-            + (1 - self.gate_u_act.forward(ubar))*deltah \
-            + self.gate_r_act.forward(rbar)*wtdz \
-            + np.matmul(np.transpose(self.Wu, [0, 2, 1]), deltau) \
-            + np.matmul(np.transpose(self.Wr, [0, 2, 1]), deltar)
+        wtdz = np.matmul(np.transpose(self.weights['W'], [0, 2, 1]),
+                         prev_gd['deltaz'])
+        deltah = deltay + (1 - fd['u'])*prev_gd['deltah'] \
+            + fd['r']*wtdz \
+            + np.matmul(np.transpose(self.weights['Wu'], [0, 2, 1]),
+                        prev_gd['deltau']) \
+            + np.matmul(np.transpose(self.weights['Wr'], [0, 2, 1]),
+                        prev_gd['deltar'])
 
-        deltaz = self.gate_u_act.forward(ubar) \
-            * deltahn * self.state_activation.prime(zbar)
-        deltau = (self.state_activation.forward(zbar) - h) \
-            * deltah * self.gate_u_act.forward(ubar)
-        deltar = h*wtdz*self.gate_r_act.prime(rbar)
+        deltaz = fd['u'] * deltah * self.state_activation.prime(fd['zbar'])
+        deltau = (fd['z'] - fd['h']) * prev_gd['deltah'] \
+            * self.gate_u_act.prime(fd['ubar'])
+        deltar = fd['h']*wtdz*self.gate_r_act.prime(fd['rbar'])
 
         # weight backward
-        dV = np.matmul(deltaz, np.transpose(x, [0, 2, 1]))
-        dVu = np.matmul(deltau, np.transpose(x, [0, 2, 1]))
-        dVr = np.matmul(deltar, np.transpose(x, [0, 2, 1]))
+        dV = np.matmul(deltaz, np.transpose(fd['x'], [0, 2, 1]))
+        dVu = np.matmul(deltau, np.transpose(fd['x'], [0, 2, 1]))
+        dVr = np.matmul(deltar, np.transpose(fd['x'], [0, 2, 1]))
 
-        # bug! Fix me!
-        dW = np.matmul(deltaz, np.transpose(h, [0, 2, 1]))
-        dWu = np.matmul(deltau, np.transpose(h, [0, 2, 1]))
-        dWr = np.matmul(deltar, np.transpose(h, [0, 2, 1]))
+        dW = np.matmul(prev_gd['deltaz'], np.transpose(fd['h'], [0, 2, 1]))
+        dWu = np.matmul(prev_gd['deltau'], np.transpose(fd['h'], [0, 2, 1]))
+        dWr = np.matmul(prev_gd['deltar'], np.transpose(fd['h'], [0, 2, 1]))
 
         db = deltaz
         dbu = deltau
         dbr = deltar
 
-        return deltahn, deltaz, deltau, deltar,\
-            dWout, dbout, dW, dWu, dWr, dV, dVu,\
-            dVr, db, dbu, dbr
+        return {'deltah': deltah, 'dWout': dWout, 'dbout': dbout,
+                'deltaz': deltaz, 'deltau': deltau, 'deltar': deltar,
+                'dW': dW, 'dWu': dWu, 'dWr': dWr,
+                'dV': dV, 'dVu': dVu, 'dVr': dVr,
+                'db': db, 'dbu': dbu, 'dbr': dbr}

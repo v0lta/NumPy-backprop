@@ -12,7 +12,7 @@ from numpy_cells import LSTMcell, MSELoss, Sigmoid, CrossEntropyCost
 if __name__ == '__main__':
     n_train = int(10e5)
     n_test = int(1e4)
-    time_steps = 1
+    time_steps = 5
     output_size = 10
     n_sequence = 10
     train_data = generate_data_memory(time_steps, n_train, n_sequence)
@@ -20,8 +20,8 @@ if __name__ == '__main__':
     # --- baseline ----------------------
     baseline = np.log(8) * 10/(time_steps + 20)
     print("Baseline is " + str(baseline))
-    batch_size = 50
-    lr = 0.00005
+    batch_size = 100
+    lr = 1.0
     cell = LSTMcell(hidden_size=64, input_size=10, output_size=output_size)
     sigmoid = Sigmoid()
 
@@ -35,9 +35,10 @@ if __name__ == '__main__':
     assert len(train_x_lst) == len(train_y_lst)
 
     # initialize cell state.
-    c = cell.zero_state(batch_size)
-    h = cell.zero_state(batch_size)
+    fd = {'c': cell.zero_state(batch_size),
+          'h': cell.zero_state(batch_size)}
     loss_lst = []
+    lr_lst = []
     # train cell
     for i in range(iterations):
         xx = train_x_lst[i]
@@ -50,41 +51,32 @@ if __name__ == '__main__':
             for t in range(20+time_steps):
                 x_one_hot[b, t, xx[b, t]] = 1
                 y_one_hot[b, t, yy[b, t]] = 1
-                
 
         x = np.expand_dims(x_one_hot, -1)
         y = np.expand_dims(y_one_hot, -1)
 
         out_lst = []
-        c_lst = []
-        h_lst = []
-        zbar_lst = []
-        ibar_lst = []
-        fbar_lst = []
-        obar_lst = []
+        fd_lst = []
         # forward
-        for t in range(time_steps + 20):
-            out, c, h, zbar, ibar, fbar, obar = \
-                cell.forward(x=x[:, t, :, :], c=c, h=h)
-            out = sigmoid.forward(out)
+        for t in range(time_steps+20):
+            fd = cell.forward(x=x[:, t, :, :],
+                              c=fd['c'], h=fd['h'])
+            fd_lst.append(fd)
+            out = sigmoid.forward(fd['y'])
             out_lst.append(out)
-            c_lst.append(c)
-            h_lst.append(h)
-            zbar_lst.append(zbar)
-            ibar_lst.append(ibar)
-            fbar_lst.append(fbar)
-            obar_lst.append(obar)
+
         out_array = np.stack(out_lst, 1)
         loss = cost.forward(label=y, out=out_array)
         deltay = np.zeros([batch_size, time_steps+20, n_sequence, 1])
         deltay[:, -10:, :, :] = cost.backward(label=y[:, -10:, :, :],
                                               out=out_array[:, -10:, :, :])
-        deltah = cell.zero_state(batch_size)
-        deltac = cell.zero_state(batch_size)
-        deltaz = cell.zero_state(batch_size)
-        deltao = cell.zero_state(batch_size)
-        deltai = cell.zero_state(batch_size)
-        deltaf = cell.zero_state(batch_size)
+
+        gd = {'deltah': cell.zero_state(batch_size),
+              'deltac': cell.zero_state(batch_size),
+              'deltaz': cell.zero_state(batch_size),
+              'deltao': cell.zero_state(batch_size),
+              'deltai': cell.zero_state(batch_size),
+              'deltaf': cell.zero_state(batch_size)}
 
         # compute accuracy
         y_net = np.squeeze(np.argmax(out_array, axis=2))
@@ -94,30 +86,21 @@ if __name__ == '__main__':
         acc = acc/(batch_size * 10.)
         # import pdb;pdb.set_trace()
 
+        gd_lst = []
         grad_lst = []
         # backward
-        for t in reversed(range(time_steps + 20)):
-            deltac, deltaz, deltao, deltai, deltaf, \
-                dWout, dbout, dWz, dWi, dWf, dWo, dRz, dRi,\
-                dRf, dRo, dbz, dbi, dbf, dbo,\
-                dpi, dpf, dpo = \
-                cell.backward(deltay=deltay[:, t, :, :],
-                              deltaz=deltaz,
-                              deltac=deltac,
-                              deltao=deltao,
-                              deltai=deltai,
-                              deltaf=deltaf,
-                              x=x[:, t, :, :],
-                              c=c_lst[t],
-                              h=h_lst[t],
-                              cm1=c_lst[t-1],
-                              zbar=zbar_lst[t],
-                              obar=obar_lst[t],
-                              ibar=ibar_lst[t],
-                              fbar=fbar_lst[t])
-            grad_lst.append([dWout, dbout, dWz, dWi, dWf,
-                             dWo, dRz, dRi, dRf, dRo, dbz,
-                             dbi, dbf, dbo, dpi, dpf, dpo])
+        for t in reversed(range(time_steps+20)):
+            gd = cell.backward(deltay=deltay[:, t, :, :],
+                               fd=fd_lst[t],
+                               prev_fd=fd_lst[t-1],
+                               prev_gd=gd)
+            gd_lst.append(gd)
+            # TODO: Move elsewhere.
+            grad_lst.append([gd['dWout'], gd['dbout'],
+                             gd['dWz'], gd['dWi'], gd['dWf'], gd['dWo'],
+                             gd['dRz'], gd['dRi'], gd['dRf'], gd['dRo'],
+                             gd['dbz'], gd['dbi'], gd['dbf'], gd['dbo'],
+                             gd['dpi'], gd['dpf'], gd['dpo']])
         ldWout, ldbout, ldWz, ldWi, ldWf, ldWo, ldRz, ldRi,\
             ldRf, ldRo, ldbz, ldbi, ldbf, ldbo,\
             ldpi, ldpf, ldpo = zip(*grad_lst)
@@ -161,23 +144,23 @@ if __name__ == '__main__':
         dpo = np.clip(np.sum(dpo, axis=0), -1.0, 1.0)
 
         # update
-        cell.Wout += -lr*np.expand_dims(np.mean(dWout, 0), 0)
-        cell.bout += -lr*np.expand_dims(np.mean(dbout, 0), 0)
-        cell.Wz += -lr*np.expand_dims(np.mean(dWz, 0), 0)
-        cell.Wi += -lr*np.expand_dims(np.mean(dWi, 0), 0)
-        cell.Wf += -lr*np.expand_dims(np.mean(dWf, 0), 0)
-        cell.Wo += -lr*np.expand_dims(np.mean(dWo, 0), 0)
-        cell.Rz += -lr*np.expand_dims(np.mean(dRz, 0), 0)
-        cell.Ri += -lr*np.expand_dims(np.mean(dRi, 0), 0)
-        cell.Rf += -lr*np.expand_dims(np.mean(dRf, 0), 0)
-        cell.Ro += -lr*np.expand_dims(np.mean(dRo, 0), 0)
-        cell.bz += -lr*np.expand_dims(np.mean(dbz, 0), 0)
-        cell.bi += -lr*np.expand_dims(np.mean(dbi, 0), 0)
-        cell.bf += -lr*np.expand_dims(np.mean(dbf, 0), 0)
-        cell.bo += -lr*np.expand_dims(np.mean(dbo, 0), 0)
-        cell.pi += -lr*np.expand_dims(np.mean(dpi, 0), 0)
-        cell.pf += -lr*np.expand_dims(np.mean(dpf, 0), 0)
-        cell.po += -lr*np.expand_dims(np.mean(dpo, 0), 0)
+        cell.weights['Wout'] += -lr*np.expand_dims(np.mean(dWout, 0), 0)
+        cell.weights['bout'] += -lr*np.expand_dims(np.mean(dbout, 0), 0)
+        cell.weights['Wz'] += -lr*np.expand_dims(np.mean(dWz, 0), 0)
+        cell.weights['Wi'] += -lr*np.expand_dims(np.mean(dWi, 0), 0)
+        cell.weights['Wf'] += -lr*np.expand_dims(np.mean(dWf, 0), 0)
+        cell.weights['Wo'] += -lr*np.expand_dims(np.mean(dWo, 0), 0)
+        cell.weights['Rz'] += -lr*np.expand_dims(np.mean(dRz, 0), 0)
+        cell.weights['Ri'] += -lr*np.expand_dims(np.mean(dRi, 0), 0)
+        cell.weights['Rf'] += -lr*np.expand_dims(np.mean(dRf, 0), 0)
+        cell.weights['Ro'] += -lr*np.expand_dims(np.mean(dRo, 0), 0)
+        cell.weights['bz'] += -lr*np.expand_dims(np.mean(dbz, 0), 0)
+        cell.weights['bi'] += -lr*np.expand_dims(np.mean(dbi, 0), 0)
+        cell.weights['bf'] += -lr*np.expand_dims(np.mean(dbf, 0), 0)
+        cell.weights['bo'] += -lr*np.expand_dims(np.mean(dbo, 0), 0)
+        cell.weights['pi'] += -lr*np.expand_dims(np.mean(dpi, 0), 0)
+        cell.weights['pf'] += -lr*np.expand_dims(np.mean(dpf, 0), 0)
+        cell.weights['po'] += -lr*np.expand_dims(np.mean(dpo, 0), 0)
 
         if i % 10 == 0:
             print(i, 'loss', "%.4f" % loss, 'baseline', baseline,
@@ -185,8 +168,8 @@ if __name__ == '__main__':
                   'done', "%.3f" % (i/iterations))
         loss_lst.append(loss)
 
-        if i % 1000 == 0 and i > 0:
-            lr = lr * 0.99
+        if i % 500 == 0 and i > 0:
+            lr = lr * 0.95
 
             # import pdb;pdb.set_trace()
             print('net', y_net[0, -10:])
@@ -199,7 +182,7 @@ if __name__ == '__main__':
     # network output for all batches
     print(out[:, 0, 0])
     plt.semilogy(loss_lst)
-    plt.title('loss')
+    plt.title('memory lstm loss')
     plt.xlabel('weight updates')
     plt.ylabel('cross entropy')
     plt.show()
