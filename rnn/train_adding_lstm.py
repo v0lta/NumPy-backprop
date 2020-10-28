@@ -12,8 +12,8 @@ if __name__ == '__main__':
     n_test = int(1e4)
     baseline = 0.167
     time_steps = 30
-    batch_size = 25
-    lr = 0.01
+    batch_size = 250
+    lr = 1.0
     cell = LSTMcell(hidden_size=64, input_size=2)
     cost = MSELoss()
 
@@ -29,7 +29,8 @@ if __name__ == '__main__':
     fd = {'c': cell.zero_state(batch_size),
           'h': cell.zero_state(batch_size)}
     loss_lst = []
-    fd_lst = []
+    lr_lst = []
+
     # train cell
     for i in range(iterations):
         x = train_x_lst[i]
@@ -39,6 +40,7 @@ if __name__ == '__main__':
         y = np.expand_dims(y, -1)
 
         out_dict_lst = []
+        fd_lst = []
         # forward
         for t in range(time_steps):
             fd = cell.forward(x=x[t, :, :, :],
@@ -135,13 +137,14 @@ if __name__ == '__main__':
         cell.weights['po'] += -lr*np.expand_dims(np.mean(dpo, 0), 0)
 
         if i % 10 == 0:
-            print(i, 'loss', "%.4f" % loss, 'baseline', baseline,
+            print(i, 'mse loss', "%.4f" % loss, 'baseline', baseline,
                   'lr', "%.6f" % lr,
                   'done', "%.3f" % (i/iterations))
         loss_lst.append(loss)
 
-        if i % 1000 == 0 and i > 0:
+        if i % 250 == 0 and i > 0:
             lr = lr * 0.95
+        lr_lst.append(lr)
 
     # 0th batch marked inputs
     print(x[x[:, 0, 1, 0] == 1., 0, 0, 0])
