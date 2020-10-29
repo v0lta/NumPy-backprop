@@ -129,7 +129,7 @@ class LSTMcell(object):
         self.weights['pf'] = np.random.randn(1, hidden_size, 1)*s
         self.weights['po'] = np.random.randn(1, hidden_size, 1)*s
 
-        self.state_activation = Tanh()
+        self.block_act = Tanh()
         self.out_activation = Tanh()
         self.gate_i_act = Sigmoid()
         self.gate_f_act = Sigmoid()
@@ -168,7 +168,7 @@ class LSTMcell(object):
         zbar = np.matmul(self.weights['Wz'], x) \
             + np.matmul(self.weights['Rz'], h) \
             + self.weights['bz']
-        z = self.state_activation.forward(zbar)
+        z = self.block_act.forward(zbar)
         # input gate
         ibar = np.matmul(self.weights['Wi'], x) \
             + np.matmul(self.weights['Ri'], h) \
@@ -210,8 +210,7 @@ class LSTMcell(object):
             A dictionary with the gradients at time t.
         """
         # projection backward
-        dWout = np.matmul(deltay,
-                          np.transpose(fd['h'], [0, 2, 1]))
+        dWout = np.matmul(deltay, np.transpose(fd['h'], [0, 2, 1]))
         dbout = 1*deltay
         deltay = np.matmul(np.transpose(self.weights['Wout'], [0, 2, 1]),
                            deltay)
@@ -227,15 +226,16 @@ class LSTMcell(object):
             + np.matmul(np.transpose(self.weights['Ro'], [0, 2, 1]),
                         prev_gd['deltao'])
 
-        deltao = deltah * fd['c'] * self.gate_o_act.prime(fd['obar'])
-        deltac = deltah * fd['o'] * self.state_activation.prime(fd['c'])\
+        deltao = deltah * self.out_activation.forward(fd['c']) \
+            * self.gate_o_act.prime(fd['obar'])
+        deltac = deltah * fd['o'] * self.block_act.prime(fd['c'])\
             + self.weights['po']*deltao \
             + self.weights['pi']*prev_gd['deltai'] \
             + self.weights['pf']*prev_gd['deltaf'] \
             + prev_gd['deltac']*prev_fd['f']
         deltaf = deltac * prev_fd['c'] * self.gate_f_act.prime(fd['fbar'])
         deltai = deltac * fd['z'] * self.gate_i_act.prime(fd['ibar'])
-        deltaz = deltac * fd['i'] * self.state_activation.prime(fd['zbar'])
+        deltaz = deltac * fd['i'] * self.block_act.prime(fd['zbar'])
 
         # weight backward
         dWz = np.matmul(deltaz, np.transpose(fd['x'], [0, 2, 1]))
@@ -254,8 +254,8 @@ class LSTMcell(object):
         dbf = deltaf
         dbo = deltao
 
-        dpi = fd['c']*deltai
-        dpf = fd['c']*deltaf
+        dpi = fd['c']*prev_gd['deltai']
+        dpf = fd['c']*prev_gd['deltaf']
         dpo = fd['c']*deltao
 
         return {'deltac': deltac, 'deltaz': deltaz, 'deltao': deltao,
