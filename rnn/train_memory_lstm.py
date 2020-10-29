@@ -35,8 +35,9 @@ if __name__ == '__main__':
     assert len(train_x_lst) == len(train_y_lst)
 
     # initialize cell state.
-    fd = {'c': cell.zero_state(batch_size),
-          'h': cell.zero_state(batch_size)}
+    fd0 = {'c': cell.zero_state(batch_size),
+          'h': cell.zero_state(batch_size),
+          'f': cell.zero_state(batch_size)}
     loss_lst = []
     lr_lst = []
     # train cell
@@ -58,6 +59,7 @@ if __name__ == '__main__':
         out_lst = []
         fd_lst = []
         # forward
+        fd = fd0
         for t in range(time_steps+20):
             fd = cell.forward(x=x[:, t, :, :],
                               c=fd['c'], h=fd['h'])
@@ -89,6 +91,7 @@ if __name__ == '__main__':
         gd_lst = []
         grad_lst = []
         # backward
+        # fd_lst.append(fd0)
         for t in reversed(range(time_steps+20)):
             gd = cell.backward(deltay=deltay[:, t, :, :],
                                fd=fd_lst[t],
