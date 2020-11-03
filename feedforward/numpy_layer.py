@@ -20,8 +20,9 @@ def normalize(data, mean=None, std=None):
 class CrossEntropyCost(object):
 
     def forward(self, label, out):
-        return -np.mean(np.nan_to_num(
-            label*np.log(out) + (1-label)*np.log(1-out)))
+        # np.sum(np.nan_to_num(-y*np.log(a)-(1-y)*np.log(1-a)))
+        return np.mean(np.nan_to_num(
+            -label*np.log(out) - (1-label)*np.log(1-out)))
 
     def backward(self, label, out):
         """ Assuming a sigmoidal netwok output."""
