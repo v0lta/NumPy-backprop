@@ -69,7 +69,8 @@ if __name__ == '__main__':
             out_lst.append(out)
 
         out_array = np.stack(out_lst, 1)
-        loss = cost.forward(label=y, out=out_array)
+        loss = cost.forward(label=y[:, -10:, :, :],
+                            out=out_array[:, -10:, :, :])
         deltay = np.zeros([batch_size, time_steps+20, n_sequence, 1])
         deltay[:, -10:, :, :] = cost.backward(label=y[:, -10:, :, :],
                                               out=out_array[:, -10:, :, :])

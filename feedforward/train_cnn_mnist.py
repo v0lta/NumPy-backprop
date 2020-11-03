@@ -122,8 +122,10 @@ if __name__ == '__main__':
         if e % 1 == 0:
             lr = lr / 2
 
+plt.title('cnn train loss')
 plt.semilogy(loss_lst)
 plt.show()
+plt.title('cnn train acc')
 plt.plot(acc_lst)
 plt.show()
 
