@@ -61,12 +61,13 @@ if __name__ == '__main__':
         gd_lst = []
         grad_lst = []
         # backward
-        # fd_lst.append(fd0)
+        fd_lst.append(fd0)
         for t in reversed(range(time_steps)):
             gd = cell.backward(deltay=deltay[t, :, :, :],
                                fd=fd_lst[t],
+                               next_fd=fd_lst[t+1],
                                prev_fd=fd_lst[t-1],
-                               prev_gd=gd)
+                               next_gd=gd)
             gd_lst.append(gd)
             # TODO: Move elsewhere.
             grad_lst.append([gd['dWout'], gd['dbout'],

@@ -7,12 +7,12 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 from generate_adding_memory import generate_data_memory
-from numpy_cells import LSTMcell, MSELoss, Sigmoid, CrossEntropyCost
+from numpy_cells import LSTMcell, Sigmoid, CrossEntropyCost
 
 if __name__ == '__main__':
-    n_train = int(10e5)
+    n_train = int(40e5)
     n_test = int(1e4)
-    time_steps = 2
+    time_steps = 1
     output_size = 10
     n_sequence = 10
     train_data = generate_data_memory(time_steps, n_train, n_sequence)
@@ -21,7 +21,7 @@ if __name__ == '__main__':
     baseline = np.log(8) * 10/(time_steps + 20)
     print("Baseline is " + str(baseline))
     batch_size = 100
-    lr = 0.1
+    lr = 1.0
     cell = LSTMcell(hidden_size=64, input_size=10, output_size=output_size)
     sigmoid = Sigmoid()
 
@@ -36,9 +36,10 @@ if __name__ == '__main__':
 
     # initialize cell state.
     fd0 = {'c': cell.zero_state(batch_size),
-          'h': cell.zero_state(batch_size),
-          'f': cell.zero_state(batch_size)}
+           'h': cell.zero_state(batch_size),
+           'f': cell.zero_state(batch_size)}
     loss_lst = []
+    acc_lst = []
     lr_lst = []
     # train cell
     for i in range(iterations):
@@ -87,16 +88,18 @@ if __name__ == '__main__':
         acc = np.sum((mem_y == mem_net).astype(np.float32))
         acc = acc/(batch_size * 10.)
         # import pdb;pdb.set_trace()
+        acc_lst.append(acc)
 
         gd_lst = []
         grad_lst = []
         # backward
-        # fd_lst.append(fd0)
+        fd_lst.append(fd0)
         for t in reversed(range(time_steps+20)):
             gd = cell.backward(deltay=deltay[:, t, :, :],
                                fd=fd_lst[t],
+                               next_fd=fd_lst[t+1],
                                prev_fd=fd_lst[t-1],
-                               prev_gd=gd)
+                               next_gd=gd)
             gd_lst.append(gd)
             # TODO: Move elsewhere.
             grad_lst.append([gd['dWout'], gd['dbout'],
@@ -104,8 +107,10 @@ if __name__ == '__main__':
                              gd['dRz'], gd['dRi'], gd['dRf'], gd['dRo'],
                              gd['dbz'], gd['dbi'], gd['dbf'], gd['dbo'],
                              gd['dpi'], gd['dpf'], gd['dpo']])
-        ldWout, ldbout, ldWz, ldWi, ldWf, ldWo, ldRz, ldRi,\
-            ldRf, ldRo, ldbz, ldbi, ldbf, ldbo,\
+        ldWout, ldbout, \
+            ldWz, ldWi, ldWf, ldWo,\
+            ldRz, ldRi, ldRf, ldRo,\
+            ldbz, ldbi, ldbf, ldbo,\
             ldpi, ldpf, ldpo = zip(*grad_lst)
         dWout = np.stack(ldWout, axis=0)
         dbout = np.stack(ldbout, axis=0)
@@ -178,14 +183,13 @@ if __name__ == '__main__':
             print('net', y_net[0, -10:])
             print('gt ', yy[0, -10:])
 
-    # 0th batch marked inputs
-    print(x[x[:, 0, 1, 0] == 1., 0, 0, 0])
-    # desired output for all batches
-    print(y[:, 0, 0])
-    # network output for all batches
-    print(out[:, 0, 0])
+    print('net', y_net[0, -10:])
+    print('gt ', yy[0, -10:])
     plt.semilogy(loss_lst)
     plt.title('memory lstm loss')
     plt.xlabel('weight updates')
     plt.ylabel('cross entropy')
+    plt.show()
+
+    plt.plot(acc_lst)
     plt.show()

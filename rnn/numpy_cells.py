@@ -10,6 +10,7 @@ sys.path.append("./feedforward/")
 from numpy_layer import DenseLayer, MSELoss, CrossEntropyCost
 from numpy_layer import Sigmoid
 
+
 class Tanh(object):
     """ Hyperbolic tangent activation function. """
     def forward(self, inputs):
@@ -197,14 +198,15 @@ class LSTMcell(object):
                 'ibar': ibar, 'i': i,  'fbar': fbar, 'f': f,
                 'obar': obar, 'o': o, 'x': x}
 
-    def backward(self, deltay, fd, prev_fd, prev_gd) -> {}:
+    def backward(self, deltay, fd, prev_fd, next_fd, next_gd) -> {}:
         """ As described in https://arxiv.org/pdf/1503.04069.pdf section B.
 
         Args:
             deltay (np.array): Gradients from the layer above.
             fd (dict): Forward dictionary recording the forward pass values.
-            prev_fd (dict): Dictionary at time t+1.
-            prev_gd (dict): Previous gradients at time t+1.
+            prev_fd (dict): Dictionary at time t-1.
+            next_ft (dict): Dictionary at time t+1.
+            next_gd (dict): Gradients at time t+1.
 
         Returns:
             A dictionary with the gradients at time t.
@@ -218,21 +220,21 @@ class LSTMcell(object):
         # block backward
         deltah = deltay \
             + np.matmul(np.transpose(self.weights['Rz'], [0, 2, 1]),
-                        prev_gd['deltaz']) \
+                        next_gd['deltaz']) \
             + np.matmul(np.transpose(self.weights['Ri'], [0, 2, 1]),
-                        prev_gd['deltai']) \
+                        next_gd['deltai']) \
             + np.matmul(np.transpose(self.weights['Rf'], [0, 2, 1]),
-                        prev_gd['deltaf']) \
+                        next_gd['deltaf']) \
             + np.matmul(np.transpose(self.weights['Ro'], [0, 2, 1]),
-                        prev_gd['deltao'])
+                        next_gd['deltao'])
 
         deltao = deltah * self.out_activation.forward(fd['c']) \
             * self.gate_o_act.prime(fd['obar'])
         deltac = deltah * fd['o'] * self.block_act.prime(fd['c'])\
             + self.weights['po']*deltao \
-            + self.weights['pi']*prev_gd['deltai'] \
-            + self.weights['pf']*prev_gd['deltaf'] \
-            + prev_gd['deltac']*prev_fd['f']
+            + self.weights['pi']*next_gd['deltai'] \
+            + self.weights['pf']*next_gd['deltaf'] \
+            + next_gd['deltac']*next_fd['f']
         deltaf = deltac * prev_fd['c'] * self.gate_f_act.prime(fd['fbar'])
         deltai = deltac * fd['z'] * self.gate_i_act.prime(fd['ibar'])
         deltaz = deltac * fd['i'] * self.block_act.prime(fd['zbar'])
@@ -244,18 +246,20 @@ class LSTMcell(object):
         dWo = np.matmul(deltao, np.transpose(fd['x'], [0, 2, 1]))
 
         # Compute recurrent weight gradients.
-        dRz = np.matmul(prev_gd['deltaz'], np.transpose(fd['h'], [0, 2, 1]))
-        dRi = np.matmul(prev_gd['deltai'], np.transpose(fd['h'], [0, 2, 1]))
-        dRf = np.matmul(prev_gd['deltaf'], np.transpose(fd['h'], [0, 2, 1]))
-        dRo = np.matmul(prev_gd['deltao'], np.transpose(fd['h'], [0, 2, 1]))
+        dRz = np.matmul(next_gd['deltaz'], np.transpose(fd['h'], [0, 2, 1]))
+        dRi = np.matmul(next_gd['deltai'], np.transpose(fd['h'], [0, 2, 1]))
+        dRf = np.matmul(next_gd['deltaf'], np.transpose(fd['h'], [0, 2, 1]))
+        dRo = np.matmul(next_gd['deltao'], np.transpose(fd['h'], [0, 2, 1]))
 
+        # bias weights
         dbz = deltaz
         dbi = deltai
         dbf = deltaf
         dbo = deltao
 
-        dpi = fd['c']*prev_gd['deltai']
-        dpf = fd['c']*prev_gd['deltaf']
+        # peephole connections.
+        dpi = fd['c']*next_gd['deltai']
+        dpf = fd['c']*next_gd['deltaf']
         dpo = fd['c']*deltao
 
         return {'deltac': deltac, 'deltaz': deltaz, 'deltao': deltao,
@@ -356,14 +360,14 @@ class GRU(object):
                 'rbar': rbar, 'r': r,
                 'ubar': ubar, 'u': u}
 
-    def backward(self, deltay, fd, prev_fd, prev_gd):
+    def backward(self, deltay, fd, prev_fd, next_gd):
         """Gated recurrent unit backward pass.
 
         Args:
             deltay (np.array): Gradients at t from the layer above.
             fd (dict): Forward dictionary recording the forward pass values.
             prev_fd (dict): Dictionary at time t+1.
-            prev_gd (dict): Previous gradients at time t+1.
+            next_gd (dict): Previous gradients at time t+1.
 
         Returns:
             A dict with:
@@ -391,16 +395,16 @@ class GRU(object):
 
         # block backward
         wtdz = np.matmul(np.transpose(self.weights['W'], [0, 2, 1]),
-                         prev_gd['deltaz'])
-        deltah = deltay + (1 - fd['u'])*prev_gd['deltah'] \
+                         next_gd['deltaz'])
+        deltah = deltay + (1 - fd['u'])*next_gd['deltah'] \
             + fd['r']*wtdz \
             + np.matmul(np.transpose(self.weights['Wu'], [0, 2, 1]),
-                        prev_gd['deltau']) \
+                        next_gd['deltau']) \
             + np.matmul(np.transpose(self.weights['Wr'], [0, 2, 1]),
-                        prev_gd['deltar'])
+                        next_gd['deltar'])
 
         deltaz = fd['u'] * deltah * self.state_activation.prime(fd['zbar'])
-        deltau = (fd['z'] - fd['h']) * prev_gd['deltah'] \
+        deltau = (fd['z'] - fd['h']) * next_gd['deltah'] \
             * self.gate_u_act.prime(fd['ubar'])
         deltar = fd['h']*wtdz*self.gate_r_act.prime(fd['rbar'])
 
@@ -409,9 +413,9 @@ class GRU(object):
         dVu = np.matmul(deltau, np.transpose(fd['x'], [0, 2, 1]))
         dVr = np.matmul(deltar, np.transpose(fd['x'], [0, 2, 1]))
 
-        dW = np.matmul(prev_gd['deltaz'], np.transpose(fd['h'], [0, 2, 1]))
-        dWu = np.matmul(prev_gd['deltau'], np.transpose(fd['h'], [0, 2, 1]))
-        dWr = np.matmul(prev_gd['deltar'], np.transpose(fd['h'], [0, 2, 1]))
+        dW = np.matmul(next_gd['deltaz'], np.transpose(fd['h'], [0, 2, 1]))
+        dWu = np.matmul(next_gd['deltau'], np.transpose(fd['h'], [0, 2, 1]))
+        dWr = np.matmul(next_gd['deltar'], np.transpose(fd['h'], [0, 2, 1]))
 
         db = deltaz
         dbu = deltau

@@ -44,13 +44,13 @@ if __name__ == '__main__':
     lr = 0.001
     batch_size = 100
     conv = ConvLayer(in_channels=1, out_channels=128,
-                      height=4, width=4, stride=2, padding=0)
+                     height=4, width=4, stride=2, padding=0)
     act1 = Sigmoid()
     conv2 = ConvLayer(in_channels=128, out_channels=256,
-                       height=3, width=3, stride=2)
+                      height=3, width=3, stride=2)
     act2 = Sigmoid()
     conv3 = ConvLayer(in_channels=256, out_channels=10,
-                       height=6, width=6, stride=1)
+                      height=6, width=6, stride=1)
     act3 = Sigmoid()
     cost = CrossEntropyCost()
     iterations = 5
@@ -100,16 +100,16 @@ if __name__ == '__main__':
             # update
             conv.weights['K'] += -lr*grad_conv['K']
             conv.weights['b'] += -lr*np.expand_dims(np.mean(grad_conv['b'],
-                                            axis=(0, 2, 3)),
-                                            (0, 2, 3))
+                                                    axis=(0, 2, 3)),
+                                                    (0, 2, 3))
             conv2.weights['K'] += -lr*grad_conv2['K']
             conv2.weights['b'] += -lr*np.expand_dims(np.mean(grad_conv2['b'],
-                                             axis=(0, 2, 3)),
-                                             (0, 2, 3))
+                                                     axis=(0, 2, 3)),
+                                                     (0, 2, 3))
             conv3.weights['K'] += -lr*grad_conv3['K']
             conv3.weights['b'] += -lr*np.expand_dims(np.mean(grad_conv3['b'],
-                                             axis=(0, 2, 3)),
-                                             (0, 2, 3))
+                                                     axis=(0, 2, 3)),
+                                                     (0, 2, 3))
             loss_lst.append(loss)
 
             true = np.sum((labels == np.squeeze(np.argmax(y_hat, axis=1))
