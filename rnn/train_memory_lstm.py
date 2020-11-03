@@ -12,7 +12,7 @@ from numpy_cells import LSTMcell, Sigmoid, CrossEntropyCost
 if __name__ == '__main__':
     n_train = int(40e5)
     n_test = int(1e4)
-    time_steps = 1
+    time_steps = 30
     output_size = 10
     n_sequence = 10
     train_data = generate_data_memory(time_steps, n_train, n_sequence)

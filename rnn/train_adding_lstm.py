@@ -155,7 +155,7 @@ if __name__ == '__main__':
     # network output for all batches
     print(fd['y'][:10, 0, 0])
     plt.semilogy(loss_lst)
-    plt.title('loss lstm')
+    plt.title('loss adding problem lstm')
     plt.xlabel('weight updates')
     plt.ylabel('mean squared error')
     plt.show()

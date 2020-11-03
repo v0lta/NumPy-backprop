@@ -129,7 +129,7 @@ plt.title('cnn train acc')
 plt.plot(acc_lst)
 plt.show()
 
-
+print('Training done. Testing. This will take a while...')
 img_data_test, lbl_data_test = get_test_data()
 img_data_test, mean, std = normalize(img_data_test, mean=mean, std=std)
 img_batches = np.split(img_data_test,
@@ -159,4 +159,4 @@ for no, img_batch in enumerate(img_batches):
         true_count += true
         total_count += batch_size
 print('test accuracy', true_count/total_count)
-print('done!')
+
