@@ -199,7 +199,8 @@ class LSTMcell(object):
                 'obar': obar, 'o': o, 'x': x}
 
     def backward(self, deltay, fd, prev_fd, next_fd, next_gd) -> {}:
-        """ As described in https://arxiv.org/pdf/1503.04069.pdf section B.
+        """ The LSTM backward pass, as described in
+            https://arxiv.org/pdf/1503.04069.pdf section B.
 
         Args:
             deltay (np.array): Gradients from the layer above.
@@ -239,7 +240,7 @@ class LSTMcell(object):
         deltai = deltac * fd['z'] * self.gate_i_act.prime(fd['ibar'])
         deltaz = deltac * fd['i'] * self.block_act.prime(fd['zbar'])
 
-        # weight backward
+        # input weight backward
         dWz = np.matmul(deltaz, np.transpose(fd['x'], [0, 2, 1]))
         dWi = np.matmul(deltai, np.transpose(fd['x'], [0, 2, 1]))
         dWf = np.matmul(deltaf, np.transpose(fd['x'], [0, 2, 1]))
@@ -257,7 +258,7 @@ class LSTMcell(object):
         dbf = deltaf
         dbo = deltao
 
-        # peephole connections.
+        # peephole connection gradient.
         dpi = fd['c']*next_gd['deltai']
         dpf = fd['c']*next_gd['deltaf']
         dpo = fd['c']*deltao
@@ -304,7 +305,6 @@ class GRU(object):
         self.weights['b'] = np.random.randn(1, hidden_size, 1)*s
 
         self.state_activation = Tanh()
-        # self.out_activation = Tanh()
         self.gate_r_act = Sigmoid()
         self.gate_u_act = Sigmoid()
 
@@ -342,7 +342,7 @@ class GRU(object):
         # update gate
         ubar = np.matmul(self.weights['Vu'], x) \
             + np.matmul(self.weights['Wu'], h) \
-            + self.weights['b']
+            + self.weights['bu']
         u = self.gate_u_act.forward(ubar)
         # block input
         hbar = r*h
@@ -360,7 +360,7 @@ class GRU(object):
                 'rbar': rbar, 'r': r,
                 'ubar': ubar, 'u': u}
 
-    def backward(self, deltay, fd, prev_fd, next_gd):
+    def backward(self, deltay, fd, prev_fd, next_fd, next_gd):
         """Gated recurrent unit backward pass.
 
         Args:
@@ -387,7 +387,7 @@ class GRU(object):
                 dbu: Update gate bias gradients.
                 dbr: Reset gate bias gradients.
         """
-        # projection backward
+        # projection backward 
         dWout = np.matmul(deltay, np.transpose(fd['h'], [0, 2, 1]))
         dbout = 1*deltay
         deltay = np.matmul(np.transpose(self.weights['Wout'], [0, 2, 1]),
@@ -396,27 +396,31 @@ class GRU(object):
         # block backward
         wtdz = np.matmul(np.transpose(self.weights['W'], [0, 2, 1]),
                          next_gd['deltaz'])
-        deltah = deltay + (1 - fd['u'])*next_gd['deltah'] \
-            + fd['r']*wtdz \
+        deltah = deltay + (1 - next_fd['u'])*next_gd['deltah'] \
+            + next_fd['r']*wtdz \
             + np.matmul(np.transpose(self.weights['Wu'], [0, 2, 1]),
                         next_gd['deltau']) \
             + np.matmul(np.transpose(self.weights['Wr'], [0, 2, 1]),
                         next_gd['deltar'])
 
         deltaz = fd['u'] * deltah * self.state_activation.prime(fd['zbar'])
-        deltau = (fd['z'] - fd['h']) * next_gd['deltah'] \
+        deltau = (fd['z'] - prev_fd['h']) * deltah \
             * self.gate_u_act.prime(fd['ubar'])
-        deltar = fd['h']*wtdz*self.gate_r_act.prime(fd['rbar'])
+        wtdz = np.matmul(np.transpose(self.weights['W'], [0, 2, 1]),
+                         deltaz)
+        deltar = prev_fd['h']*wtdz*self.gate_r_act.prime(fd['rbar'])
 
-        # weight backward
+        # input weight gradients
         dV = np.matmul(deltaz, np.transpose(fd['x'], [0, 2, 1]))
         dVu = np.matmul(deltau, np.transpose(fd['x'], [0, 2, 1]))
         dVr = np.matmul(deltar, np.transpose(fd['x'], [0, 2, 1]))
 
-        dW = np.matmul(next_gd['deltaz'], np.transpose(fd['h'], [0, 2, 1]))
+        # recurrent weight gradients
+        dW = np.matmul(next_gd['deltaz'], np.transpose(fd['hbar'], [0, 2, 1]))
         dWu = np.matmul(next_gd['deltau'], np.transpose(fd['h'], [0, 2, 1]))
         dWr = np.matmul(next_gd['deltar'], np.transpose(fd['h'], [0, 2, 1]))
 
+        # bias gradients
         db = deltaz
         dbu = deltau
         dbr = deltar

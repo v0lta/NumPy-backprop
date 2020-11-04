@@ -9,12 +9,12 @@ from generate_adding_memory import generate_data_adding
 from numpy_cells import GRU, MSELoss
 
 if __name__ == '__main__':
-    n_train = int(9e5)
+    n_train = int(10e5)
     n_test = int(1e4)
     baseline = 0.167
     time_steps = 10
     batch_size = 100
-    lr = 0.1
+    lr = .1
     cell = GRU(hidden_size=64, input_size=2)
     cost = MSELoss()
 
@@ -27,7 +27,9 @@ if __name__ == '__main__':
     assert len(train_x_lst) == len(train_y_lst)
 
     # initialize cell state.
-    fd = {'h': cell.zero_state(batch_size)}
+    fd0 = {'h': cell.zero_state(batch_size),
+           'r': cell.zero_state(batch_size),
+           'u': cell.zero_state(batch_size)}
     loss_lst = []
     # train cell
     for i in range(iterations):
@@ -39,6 +41,7 @@ if __name__ == '__main__':
 
         fd_lst = []
         # forward
+        fd = fd0
         for t in range(time_steps):
             fd = cell.forward(x=x[t, :, :, :],
                               h=fd['h'])
@@ -55,10 +58,13 @@ if __name__ == '__main__':
 
         grad_lst = []
         # backward
+        fd_lst.append(fd0)
         for t in reversed(range(time_steps)):
             gd = cell.backward(deltay=deltay[t, :, :, :],
-                               fd=fd, prev_fd=fd_lst[t-1],
-                               prev_gd=gd)
+                               fd=fd,
+                               next_fd=fd_lst[t+1],
+                               prev_fd=fd_lst[t-1],
+                               next_gd=gd)
             # TODO: Move
             grad_lst.append([gd['dWout'], gd['dbout'],
                              gd['dW'], gd['dWu'], gd['dWr'],
@@ -112,7 +118,7 @@ if __name__ == '__main__':
         loss_lst.append(loss)
 
         if i % 500 == 0 and i > 0:
-            lr = lr * 0.95
+            lr = lr * 0.96
 
     # 0th batch marked inputs
     print(x[x[:, 0, 1, 0] == 1., 0, 0, 0])
@@ -121,7 +127,7 @@ if __name__ == '__main__':
     # network output for all batches
     print(fd['y'][:10, 0, 0])
     plt.semilogy(loss_lst)
-    plt.title('loss gru')
+    plt.title('loss adding gru')
     plt.xlabel('weight updates')
     plt.ylabel('mean squared error')
     plt.show()
