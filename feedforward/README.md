@@ -15,6 +15,7 @@ Both scripts also do a test run, which will take a little while.
 Running these I observed:
 - A dense structure MNIST-test accuracy of 97.22% .
 - A CNN structure MNIST-test accuracy of 95.21%.
-I did not spent any time tuning hyperparameters, but I think
+
+I did not spent time tuning hyperparameters, but I think
 we can safely conclude that both structures extract useful
 patterns.
