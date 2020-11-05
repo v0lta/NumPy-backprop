@@ -11,9 +11,9 @@ and not suitable for production purposes.
 The ```feedforward``` folder explores fully connected and convolutional
 layers on the MNIST digit recognition problem.
 
-The ```rnn``` folder contains recurrent neural networks and code to train them
-on adding and memory problems similar to those described by Hochreiter und
-Schmidhuber in 1997.
+The ```rnn``` folder contains recurrent neural networks based on LSTM and
+GRU, code to train them on adding and memory problems. These are similar
+to those described by Hochreiter und Schmidhuber in 1997.
 
 The source code in this repository runs using NumPy versions >= 1.18.1
 and should run reasonably well on any mid to top range CPU.
