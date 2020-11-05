@@ -6,7 +6,7 @@
 
 import numpy as np
 import sys
-sys.path.append("./feedforward/")
+sys.path.append("../feedforward/")
 from numpy_layer import DenseLayer, MSELoss, CrossEntropyCost
 from numpy_layer import Sigmoid
 
