@@ -1,8 +1,9 @@
 ## MNIST digit recognition in numpy.
 
 To run the experiments execute './download_mnist.sh'.
-The script will create the './data' folder and extract
-the MNIST train and test samples there.
+The script will create the './data' folder 
+download the MNIST data from http://yann.lecun.com
+and extract the MNIST train and test samples there.
 
 To train and test the dense classifier run
 'python train_dense_mnist.py'.
