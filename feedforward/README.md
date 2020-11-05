@@ -12,5 +12,5 @@ and tested by running
 
 Both scripts also do a test run, which will take a little while.
 Running these I observed:
-- A Dense structure test accuracy of .
+- A Dense structure test accuracy of 97.22% .
 - A CNN structure test accuracy of .
