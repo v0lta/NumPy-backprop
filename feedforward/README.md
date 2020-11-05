@@ -9,3 +9,7 @@ To train and test the dense classifier run
 similarly, the convolutional neural net can be trained
 and tested by running
 'python train_cnn_mnist.py' .
+
+In both script also do a test run, which will take a little while.
+Dense structure accuracy:
+CNN structure accuracy:
