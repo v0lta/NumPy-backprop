@@ -1,5 +1,5 @@
-Numpy Re-Implementations of iconic machine learning breakthroughs.
-------------------------------------------------------------------
+Feedforward and recurrent machine learning in NummPy.
+-----------------------------------------------------
 
 In this repository, important machine learning structures are implemented 
 in pure NumPy for educational purposes. Working only in NumPy makes the backward
