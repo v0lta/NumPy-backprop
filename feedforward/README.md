@@ -1,4 +1,4 @@
-## MNIST Digit Recognition in numpy.
+## MNIST digit recognition in numpy.
 
 To run the experiments execute './download_mnist.sh'.
 The script will create the './data' folder and extract
