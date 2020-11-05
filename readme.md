@@ -15,6 +15,4 @@ on the adding problem.
 The source code in this repository runs using NumPy versions >= 1.18.1
 and should run reasonably well on any mid to top range CPU.
 
-The the rnn folder is work in progress.
-
 I am looking for feedback! If you see an error please open an issue.

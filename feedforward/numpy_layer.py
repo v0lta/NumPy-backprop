@@ -1,5 +1,5 @@
 # Created by moritz (wolter@cs.uni-bonn.de)
-# a numpy only le net implementation
+# a numpy only CNN implementation
 # based on http://yann.lecun.com/exdb/publis/pdf/lecun-98.pdf
 # and https://github.com/mnielsen/neural-networks-and-deep-learning/blob/master/src/network2.py
 
