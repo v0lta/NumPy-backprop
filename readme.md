@@ -1,4 +1,4 @@
-Feedforward and recurrent machine learning in NummPy.
+Feedforward and recurrent machine learning in NumPy.
 -----------------------------------------------------
 
 In this repository, important machine learning structures are implemented 
