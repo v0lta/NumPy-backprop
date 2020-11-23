@@ -1,4 +1,4 @@
-# Created by moritz (wolter@cs.uni-bonn.de)
+# Written by moritz (wolter@cs.uni-bonn.de)
 
 # based on https://gist.github.com/karpathy/d4dee566867f8291f086,
 # see also https://arxiv.org/pdf/1503.04069.pdf
@@ -6,9 +6,57 @@
 
 import numpy as np
 import sys
-sys.path.append("./feedforward/")
-from numpy_layer import DenseLayer, MSELoss, CrossEntropyCost
-from numpy_layer import Sigmoid
+import pdb
+
+
+class CrossEntropyCost(object):
+
+    def forward(self, label, out):
+        # np.sum(np.nan_to_num(-y*np.log(a)-(1-y)*np.log(1-a)))
+        return np.mean(-label*np.log(out + 1e-8)
+                       - (1-label)*np.log(1-out + 1e-8))
+
+    def backward(self, label, out):
+        """ Assuming a sigmoidal netwok output."""
+        return (out-label)
+
+
+class MSELoss(object):
+    ''' Mean squared error loss function. '''
+    def forward(self, label, out):
+        diff = out - label
+        return np.mean(diff*diff)
+
+    def backward(self, label, out):
+        return out - label
+
+class ReLu(object):
+
+    def forward(self, inputs):
+        inputs[inputs <= 0] = 0
+        return inputs
+
+    def backward(self, inputs, delta):
+        delta[delta <= 0] = 0
+        return delta
+
+class Sigmoid(object):
+    """ Sigmoid activation function. """
+    def sigmoid(self, inputs):
+        # sig = np.exp(inputs)/(1 + np.exp(inputs))
+        # return np.nan_to_num(sig)
+        return np.where(inputs >= 0, 
+                        1 / (1 + np.exp(-inputs)), 
+                        np.exp(inputs) / (1 + np.exp(inputs)))
+
+    def forward(self, inputs):
+        return self.sigmoid(inputs)
+
+    def backward(self, inputs, delta):
+        return self.sigmoid(inputs)*(1 - self.sigmoid(inputs))*delta
+
+    def prime(self, inputs):
+        return self.sigmoid(inputs)*(1 - self.sigmoid(inputs))
 
 
 class Tanh(object):
@@ -21,80 +69,6 @@ class Tanh(object):
 
     def prime(self, inputs):
         return (1. - np.tanh(inputs)*np.tanh(inputs))
-
-
-class BasicCell(object):
-    """Basic (Elman) rnn cell."""
-
-    def __init__(self, hidden_size=250, input_size=1, output_size=1,
-                 activation=Tanh()):
-        self.hidden_size = hidden_size
-        # input to hidden
-        self.Wxh = np.random.randn(1, hidden_size, input_size)
-        self.Wxh = self.Wxh / np.sqrt(hidden_size)
-        # hidden to hidden
-        self.Whh = np.random.randn(1, hidden_size, hidden_size)
-        self.Whh = self.Whh / np.sqrt(hidden_size)
-        # hidden to output
-        self.Why = np.random.randn(1, output_size, hidden_size)
-        self.Why = self.Why / np.sqrt(hidden_size)
-        # hidden bias
-        self.bh = np.zeros((1, hidden_size, 1))
-        # output bias
-        self.by = np.random.randn(1, output_size, 1)*0.01
-        self.activation = activation
-
-    def zero_state(self, batch_size):
-        return np.zeros((batch_size, self.hidden_size, 1))
-
-    def forward(self, x, h):
-        """Basic Cell forward pass.
-
-        Args:
-            x (np.array): The input at the current time step.
-            h (np.array): The cell-state at the current time step.
-
-        Returns:
-            y (np.array): Cell output.
-            h (np.array): Updated cell state.
-        """
-        h = np.matmul(self.Whh, h) + np.matmul(self.Wxh, x) + self.bh
-        h = self.activation.forward(h)
-        y = np.matmul(self.Why, h) + self.by
-        return y, h
-
-    def backward(self, deltay, deltah, x, h, hm1):
-        """The backward pass of the Basic-RNN cell.
-
-        Args:
-            deltay (np.array): Deltas from the layer above.
-                               [batch_size, output_size, 1].
-            deltah (np.array): Cell state deltas.
-            x (np.array): Input at current time step.
-            h (np.array): State at current time step.
-            hm1 (np.array): State at previous time step.
-
-        Returns:
-            deltah (np.array): Updated block deltas.
-            dWhh (np.array): Recurrent weight matrix gradients.
-            dWxh (np.array): Input weight matrix gradients
-            dbh (np.array): Bias gradients.
-            dWhy (np.array):  Output projection matrix gradients.
-            dby (np.array): Ouput bias gradients.
-        """
-        # output backprop
-        dydh = np.matmul(np.transpose(self.Why, [0, 2, 1]), deltay)
-        dWhy = np.matmul(deltay, np.transpose(h, [0, 2, 1]))
-        dby = 1*deltay
-
-        delta = self.activation.backward(inputs=h, delta=dydh) + deltah
-        # recurrent backprop
-        dWxh = np.matmul(delta, np.transpose(x, [0, 2, 1]))
-        dWhh = np.matmul(delta, np.transpose(hm1, [0, 2, 1]))
-        dbh = 1*delta
-        deltah = np.matmul(np.transpose(self.Whh, [0, 2, 1]), delta)
-        # deltah, dWhh, dWxh, dbh, dWhy, dby
-        return deltah, dWhh, dWxh, dbh, dWhy, dby
 
 
 class LSTMcell(object):
@@ -111,24 +85,32 @@ class LSTMcell(object):
         # create the weights
         s = 1./np.sqrt(hidden_size)
         self.weights = {}
-        self.weights['Wz'] = np.random.randn(1, hidden_size, input_size)*s
-        self.weights['Wi'] = np.random.randn(1, hidden_size, input_size)*s
-        self.weights['Wf'] = np.random.randn(1, hidden_size, input_size)*s
-        self.weights['Wo'] = np.random.randn(1, hidden_size, input_size)*s
+        self.weights['Wz'] = np.random.uniform(-s, s, (1, hidden_size,
+                                               input_size))
+        self.weights['Wi'] = np.random.uniform(-s, s, (1, hidden_size,
+                                               input_size))
+        self.weights['Wf'] = np.random.uniform(-s, s, (1, hidden_size,
+                                               input_size))
+        self.weights['Wo'] = np.random.uniform(-s, s, (1, hidden_size,
+                                               input_size))
 
-        self.weights['Rz'] = np.random.randn(1, hidden_size, hidden_size)*s
-        self.weights['Ri'] = np.random.randn(1, hidden_size, hidden_size)*s
-        self.weights['Rf'] = np.random.randn(1, hidden_size, hidden_size)*s
-        self.weights['Ro'] = np.random.randn(1, hidden_size, hidden_size)*s
+        self.weights['Rz'] = np.random.uniform(-s, s, (1, hidden_size,
+                                               hidden_size))
+        self.weights['Ri'] = np.random.uniform(-s, s, (1, hidden_size,
+                                               hidden_size))
+        self.weights['Rf'] = np.random.uniform(-s, s, (1, hidden_size,
+                                               hidden_size))
+        self.weights['Ro'] = np.random.uniform(-s, s, (1, hidden_size,
+                                               hidden_size))
 
-        self.weights['bz'] = np.zeros((1, hidden_size, 1))*s
-        self.weights['bi'] = np.random.randn(1, hidden_size, 1)*s
-        self.weights['bf'] = np.random.randn(1, hidden_size, 1)*s
-        self.weights['bo'] = np.random.randn(1, hidden_size, 1)*s
+        self.weights['bz'] = np.random.uniform(-s, s, (1, hidden_size, 1))
+        self.weights['bi'] = np.random.uniform(-s, s, (1, hidden_size, 1))
+        self.weights['bf'] = np.random.uniform(-s, s, (1, hidden_size, 1))
+        self.weights['bo'] = np.random.uniform(-s, s, (1, hidden_size, 1))
 
-        self.weights['pi'] = np.random.randn(1, hidden_size, 1)*s
-        self.weights['pf'] = np.random.randn(1, hidden_size, 1)*s
-        self.weights['po'] = np.random.randn(1, hidden_size, 1)*s
+        self.weights['pi'] = np.random.uniform(-s, s, (1, hidden_size, 1))
+        self.weights['pf'] = np.random.uniform(-s, s, (1, hidden_size, 1))
+        self.weights['po'] = np.random.uniform(-s, s, (1, hidden_size, 1))
 
         self.block_act = Tanh()
         self.out_activation = Tanh()
@@ -271,16 +253,113 @@ class LSTMcell(object):
                 'dbz': dbz, 'dbi': dbi, 'dbf': dbf, 'dbo': dbo,
                 'dpi': dpi, 'dpf': dpf, 'dpo': dpo}
 
-    def update(self):
-        """ Compute a SGD update step. """
-        pass
+
+class BasicCell(object):
+    """Basic (Elman) rnn cell."""
+
+    def __init__(self, hidden_size=250, input_size=1, output_size=1,
+                 activation=Tanh()):
+        self.hidden_size = hidden_size
+        # input to hidden
+        s = 1. / np.sqrt(hidden_size)
+        # s = 0.01
+        self.Wxh = np.random.randn(1, hidden_size, input_size)*s
+        # hidden to hidden
+        self.Whh = np.random.randn(1, hidden_size, hidden_size)*s
+        # hidden to output
+        self.Why = np.random.randn(1, output_size, hidden_size)*s
+        # hidden bias
+        # self.bh = np.zeros((1, hidden_size, 1))
+        # output bias
+        self.by = np.random.randn(1, output_size, 1)*0.
+        self.activation = activation
+
+    def zero_state(self, batch_size):
+        return np.zeros((batch_size, self.hidden_size, 1))
+
+    def get_state_transition_norm(self):
+        return np.linalg.norm(np.squeeze(self.Whh), ord=2)
+
+    def forward(self, x, h):
+        """Basic Cell forward pass.
+
+        Args:
+            x (np.array): The input at the current time step.
+            h (np.array): The cell-state at the current time step.
+
+        Returns:
+            y (np.array): Cell output.
+            h (np.array): Updated cell state.
+        """
+        h = np.matmul(self.Whh, h) + np.matmul(self.Wxh, x) # + self.bh
+        h = self.activation.forward(h)
+        y = np.matmul(self.Why, h) + self.by
+        return y, h
+
+    def backward(self, deltay, deltah, x, h, hm1):
+        """The backward pass of the Basic-RNN cell.
+
+        Args:
+            deltay (np.array): Deltas from the layer above.
+                               [batch_size, output_size, 1].
+            deltah (np.array): Cell state deltas.
+            x (np.array): Input at current time step.
+            h (np.array): State at current time step.
+            hm1 (np.array): State at previous time step.
+
+        Returns:
+            deltah (np.array): Updated block deltas.
+            dWhh (np.array): Recurrent weight matrix gradients.
+            dWxh (np.array): Input weight matrix gradients
+            dWhy (np.array):  Output projection matrix gradients.
+            dby (np.array): Ouput bias gradients.
+        """
+        # output backprop
+        dydh = np.matmul(np.transpose(self.Why, [0, 2, 1]), deltay)
+        dWhy = np.matmul(deltay, np.transpose(h, [0, 2, 1]))
+        dby = 1*deltay
+
+        delta = self.activation.backward(inputs=h, delta=dydh) + deltah
+        # recurrent backprop
+        dWxh = np.matmul(delta, np.transpose(x, [0, 2, 1]))
+        dWhh = np.matmul(delta, np.transpose(hm1, [0, 2, 1]))
+        # dbh = 1*delta
+        deltah = np.matmul(np.transpose(self.Whh, [0, 2, 1]), delta)
+        # deltah, dWhh, dWxh, dbh, dWhy, dby
+        return deltah, dWhh, dWxh, dWhy, dby
+
+    def update(self, grad_lst, lr, clip=1.):
+        """ Do a basic SGD update step.
+
+        Args:
+            grad_lst: A list with the numerical gradients over 
+                      time.
+        """
+        ldWhh, ldWxh, ldWhy, ldby = zip(*grad_lst)
+        dWhh = np.stack(ldWhh, axis=0)
+        dWxh = np.stack(ldWxh, axis=0)
+        dWhy = np.stack(ldWhy, axis=0)
+        dby = np.stack(ldby, axis=0)
+        # backprop in time requires us to sum the gradients at each
+        # point in time.
+
+        # clipping.
+        dWhh = np.clip(np.sum(dWhh, axis=0), -clip, clip)
+        dWxh = np.clip(np.sum(dWxh, axis=0), -clip, clip)
+        dWhy = np.clip(np.sum(dWhy, axis=0), -clip, clip)
+        dby = np.clip(np.sum(dby, axis=0), -clip, clip)
+
+        # update
+        self.Whh += -lr*np.expand_dims(np.mean(dWhh, 0), 0)
+        self.Wxh += -lr*np.expand_dims(np.mean(dWxh, 0), 0)
+        self.Why += -lr*np.expand_dims(np.mean(dWhy, 0), 0)
+        self.by += -lr*np.expand_dims(np.mean(dby, 0), 0)
 
 
 class GRU(object):
-    def __init__(self, hidden_size=250,
+    def __init__(self, hidden_size=64,
                  input_size=1, output_size=1):
         """Create a Gated Recurrent unit.
-
         Args:
             hidden_size (int, optional): The cell size. Defaults to 250.
             input_size (int, optional): The number of input dimensions.
@@ -292,35 +371,36 @@ class GRU(object):
         # create the weights
         s = 1./np.sqrt(hidden_size)
         self.weights = {}
-        self.weights['Vr'] = np.random.randn(1, hidden_size, input_size)*s
-        self.weights['Vu'] = np.random.randn(1, hidden_size, input_size)*s
-        self.weights['V'] = np.random.randn(1, hidden_size, input_size)*s
+        V_size = (1, hidden_size, input_size)
+        self.weights['Vr'] = np.random.uniform(-s, s, size=V_size)
+        self.weights['Vu'] = np.random.uniform(-s, s, size=V_size)
+        self.weights['V'] = np.random.uniform(-s, s, size=V_size)
 
-        self.weights['Wr'] = np.random.randn(1, hidden_size, hidden_size)*s
-        self.weights['Wu'] = np.random.randn(1, hidden_size, hidden_size)*s
-        self.weights['W'] = np.random.randn(1, hidden_size, hidden_size)*s
+        W_size = (1, hidden_size, hidden_size)
+        self.weights['Wr'] = np.random.uniform(-s, s, size=W_size)
+        self.weights['Wu'] = np.random.uniform(-s, s, size=W_size)
+        self.weights['W'] = np.random.uniform(-s, s, size=W_size)
 
-        self.weights['br'] = np.zeros((1, hidden_size, 1))*s
-        self.weights['bu'] = np.random.randn(1, hidden_size, 1)*s
-        self.weights['b'] = np.random.randn(1, hidden_size, 1)*s
+        self.weights['br'] = np.random.uniform(-s, s, size=(1, hidden_size, 1))
+        self.weights['bu'] = np.random.uniform(-s, s, size=(1, hidden_size, 1))
+        self.weights['b'] = np.random.uniform(-s, s,  size=(1, hidden_size, 1))
 
         self.state_activation = Tanh()
         self.gate_r_act = Sigmoid()
         self.gate_u_act = Sigmoid()
 
-        self.weights['Wout'] = np.random.randn(1, output_size, hidden_size)*s
-        self.weights['bout'] = np.random.randn(1, output_size, 1)
+        out_size = (1, output_size, hidden_size)
+        self.weights['Wout'] = np.random.uniform(-s, s, size=out_size)
+        self.weights['bout'] = np.random.uniform(-s, s, size=(1, output_size, 1))
 
     def zero_state(self, batch_size):
         return np.zeros((batch_size, self.hidden_size, 1))
 
     def forward(self, x, h):
         """Gated recurrent unit forward pass.
-
         Args:
             x (np.array): Current input [batch_size, input_dim, 1]
             h (np.array): Current cell state [batch_size, hidden_dim, 1]
-
         Returns:
             A dictionary containing:
                 y    (np.array): Current output
@@ -362,13 +442,11 @@ class GRU(object):
 
     def backward(self, deltay, fd, prev_fd, next_fd, next_gd):
         """Gated recurrent unit backward pass.
-
         Args:
             deltay (np.array): Gradients at t from the layer above.
             fd (dict): Forward dictionary recording the forward pass values.
             prev_fd (dict): Dictionary at time t+1.
             next_gd (dict): Previous gradients at time t+1.
-
         Returns:
             A dict with:
                 deltah: New recurrent gradients.
@@ -395,13 +473,13 @@ class GRU(object):
 
         # block backward
         wtdz = np.matmul(np.transpose(self.weights['W'], [0, 2, 1]),
-                         next_gd['deltaz'])
-        deltah = deltay + (1 - next_fd['u'])*next_gd['deltah'] \
+                         next_gd['z'])
+        deltah = deltay + (1 - next_fd['u'])*next_gd['h'] \
             + next_fd['r']*wtdz \
             + np.matmul(np.transpose(self.weights['Wu'], [0, 2, 1]),
-                        next_gd['deltau']) \
+                        next_gd['u']) \
             + np.matmul(np.transpose(self.weights['Wr'], [0, 2, 1]),
-                        next_gd['deltar'])
+                        next_gd['r'])
 
         deltaz = fd['u'] * deltah * self.state_activation.prime(fd['zbar'])
         deltau = (fd['z'] - prev_fd['h']) * deltah \
@@ -416,17 +494,18 @@ class GRU(object):
         dVr = np.matmul(deltar, np.transpose(fd['x'], [0, 2, 1]))
 
         # recurrent weight gradients
-        dW = np.matmul(next_gd['deltaz'], np.transpose(fd['hbar'], [0, 2, 1]))
-        dWu = np.matmul(next_gd['deltau'], np.transpose(fd['h'], [0, 2, 1]))
-        dWr = np.matmul(next_gd['deltar'], np.transpose(fd['h'], [0, 2, 1]))
+        dW = np.matmul(next_gd['z'], np.transpose(fd['hbar'], [0, 2, 1]))
+        dWu = np.matmul(next_gd['u'], np.transpose(fd['h'], [0, 2, 1]))
+        dWr = np.matmul(next_gd['r'], np.transpose(fd['h'], [0, 2, 1]))
 
         # bias gradients
         db = deltaz
         dbu = deltau
         dbr = deltar
 
-        return {'deltah': deltah, 'dWout': dWout, 'dbout': dbout,
-                'deltaz': deltaz, 'deltau': deltau, 'deltar': deltar,
-                'dW': dW, 'dWu': dWu, 'dWr': dWr,
-                'dV': dV, 'dVu': dVu, 'dVr': dVr,
-                'db': db, 'dbu': dbu, 'dbr': dbr}
+        return {'h': deltah, 'Wout': dWout, 'bout': dbout,
+                'z': deltaz, 'u': deltau, 'r': deltar,
+                'W': dW, 'Wu': dWu, 'Wr': dWr,
+                'V': dV, 'Vu': dVu, 'Vr': dVr,
+                'b': db, 'bu': dbu, 'br': dbr}
+

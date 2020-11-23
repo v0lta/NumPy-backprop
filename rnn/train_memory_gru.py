@@ -8,6 +8,7 @@ import matplotlib.pyplot as plt
 
 from generate_adding_memory import generate_data_memory
 from numpy_cells import GRU, Sigmoid, CrossEntropyCost
+from opt import RMSprop
 
 if __name__ == '__main__':
     n_train = int(40e5)
@@ -17,12 +18,11 @@ if __name__ == '__main__':
     n_sequence = 10
     train_data = generate_data_memory(time_steps, n_train, n_sequence)
     test_data = generate_data_memory(time_steps, n_test, n_sequence)
-    # --- baseline ----------------------
-    baseline = np.log(8) * 10/(time_steps + 20)  # TODO: FIXME!
-    print("Baseline is " + str(baseline))
+
     batch_size = 100
-    lr = .1
+    lr = 0.01
     cell = GRU(hidden_size=64, input_size=10, output_size=output_size)
+    opt = RMSprop(lr=lr)
     sigmoid = Sigmoid()
 
     cost = CrossEntropyCost()
@@ -69,16 +69,16 @@ if __name__ == '__main__':
             out_lst.append(out)
 
         out_array = np.stack(out_lst, 1)
-        loss = cost.forward(label=y[:, -10:, :, :],
-                            out=out_array[:, -10:, :, :])
+        loss = cost.forward(label=y[:, :, :, :],
+                            out=out_array[:, :, :, :])
         deltay = np.zeros([batch_size, time_steps+20, n_sequence, 1])
-        deltay[:, -10:, :, :] = cost.backward(label=y[:, -10:, :, :],
-                                              out=out_array[:, -10:, :, :])
+        deltay = cost.backward(label=y[:, :, :, :],
+                               out=out_array[:, :, :, :])
 
-        gd = {'deltaz': cell.zero_state(batch_size),
-              'deltah': cell.zero_state(batch_size),
-              'deltau': cell.zero_state(batch_size),
-              'deltar': cell.zero_state(batch_size)}
+        gd = {'z': cell.zero_state(batch_size),
+              'h': cell.zero_state(batch_size),
+              'u': cell.zero_state(batch_size),
+              'r': cell.zero_state(batch_size)}
 
         # compute accuracy
         y_net = np.squeeze(np.argmax(out_array, axis=2))
@@ -100,63 +100,47 @@ if __name__ == '__main__':
                                prev_fd=fd_lst[t-1],
                                next_gd=gd)
             gd_lst.append(gd)
-            grad_lst.append([gd['dWout'], gd['dbout'],
-                             gd['dW'], gd['dWu'], gd['dWr'],
-                             gd['dV'], gd['dVu'], gd['dVr'],
-                             gd['db'], gd['dbu'], gd['dbr']])
-        ldWout, ldbout, ldW, ldWu, ldWr, ldV, ldVu,\
-            ldVr, ldb, ldbu, ldbr = zip(*grad_lst)
-        dWout = np.stack(ldWout, axis=0)
-        dbout = np.stack(ldbout, axis=0)
-        dW = np.stack(ldW, axis=0)
-        dWu = np.stack(ldWu, axis=0)
-        dWr = np.stack(ldWr, axis=0)
-        dV = np.stack(ldV, axis=0)
-        dVu = np.stack(ldVu, axis=0)
-        dVr = np.stack(ldVr, axis=0)
-        db = np.stack(ldb, axis=0)
-        dbu = np.stack(ldbu, axis=0)
-        dbr = np.stack(ldbr, axis=0)
+            grad_lst.append([gd['Wout'], gd['bout'],
+                             gd['W'], gd['Wu'], gd['Wr'],
+                             gd['V'], gd['Vu'], gd['Vr'],
+                             gd['b'], gd['bu'], gd['br']])
+        grad_double_list = list(zip(*grad_lst))
 
+        # stack the gradients in time.
+        stack_list = []
+        for grad_list in grad_double_list:
+            stack_list.append(np.stack(grad_list))
+        
         # backprop in time requires us to sum the gradients at each
         # point in time. Clip between -1 and 1.
-        dWout = np.clip(np.sum(ldWout, axis=0), -1, 1)
-        dbout = np.clip(np.sum(ldbout, axis=0), -1, 1)
-        dW = np.clip(np.sum(ldW, axis=0), -1, 1)
-        dWu = np.clip(np.sum(ldWu, axis=0), -1, 1)
-        dWr = np.clip(np.sum(ldWr, axis=0), -1, 1)
-        dV = np.clip(np.sum(ldV, axis=0), -1, 1)
-        dVu = np.clip(np.sum(ldVu, axis=0), -1, 1)
-        dVr = np.clip(np.sum(ldVr, axis=0), -1, 1)
-        db = np.clip(np.sum(ldb, axis=0), -1, 1)
-        dbu = np.clip(np.sum(ldbu, axis=0), -1, 1)
-        dbr = np.clip(np.sum(ldbr, axis=0), -1, 1)
+        clip_list = []
+        for grads in stack_list:
+            # clip_list.append(np.clip(np.sum(grads, axis=0), -1, 1))
+            clip_list.append(np.sum(grads, axis=0))
+
+        # turn back into dict for optimizer.
+        keys = ['Wout', 'bout', 'W', 'Wu', 'Wr',
+                'V', 'Vu', 'Vr', 'b', 'bu', 'br']
+        gd = {}
+        for key_no, key in enumerate(keys):
+            gd[key] = clip_list[key_no]
 
         # update
-        cell.weights['Wout'] += -lr*np.expand_dims(np.mean(dWout, 0), 0)
-        cell.weights['bout'] += -lr*np.expand_dims(np.mean(dbout, 0), 0)
-        cell.weights['W'] += -lr*np.expand_dims(np.mean(dW, 0), 0)
-        cell.weights['Wu'] += -lr*np.expand_dims(np.mean(dWu, 0), 0)
-        cell.weights['Wr'] += -lr*np.expand_dims(np.mean(dWr, 0), 0)
-        cell.weights['V'] += -lr*np.expand_dims(np.mean(dV, 0), 0)
-        cell.weights['Vu'] += -lr*np.expand_dims(np.mean(dVu, 0), 0)
-        cell.weights['Vr'] += -lr*np.expand_dims(np.mean(dVr, 0), 0)
-        cell.weights['b'] += -lr*np.expand_dims(np.mean(db, 0), 0)
-        cell.weights['bu'] += -lr*np.expand_dims(np.mean(dbu, 0), 0)
-        cell.weights['br'] += -lr*np.expand_dims(np.mean(dbr, 0), 0)
+        opt.step(cell, gd)
 
         if i % 10 == 0:
-            print(i, 'loss', "%.4f" % loss, 'baseline', "%.4f" % baseline,
+            print(i, 'loss', "%.4f" % loss,
                   'acc', "%.4f" % acc, 'lr', "%.6f" % lr,
                   'done', "%.3f" % (i/iterations))
         loss_lst.append(loss)
 
         if i % 500 == 0 and i > 0:
-            lr = lr * 0.96
+            opt.lr = opt.lr * 0.96
 
             # import pdb;pdb.set_trace()
-            print('net', y_net[0, -10:])
-            print('gt ', yy[0, -10:])
+            # print('net', y_net[0, -10:])
+            print('net', y_net[0, :])
+            print('gt ', yy[0, :])
 
     print('net', y_net[0, -10:])
     print('gt ', yy[0, -10:])
