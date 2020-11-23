@@ -117,10 +117,10 @@ if __name__ == '__main__':
         if e % 1 == 0:
             lr = lr / 2
 
-    plt.plot(loss_lst)
-    plt.show()
-    plt.plot(acc_lst)
-    plt.show()
+    # plt.plot(loss_lst)
+    # plt.show()
+    # plt.plot(acc_lst)
+    # plt.show()
 
     img_data_test, lbl_data_test = get_test_data()
     img_data_test, mean, std = normalize(img_data_test, mean=mean, std=std)
@@ -151,4 +151,3 @@ if __name__ == '__main__':
             true_count += true
             total_count += batch_size
     print('test accuracy', true_count/total_count)
-    print('done!')

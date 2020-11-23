@@ -122,14 +122,14 @@ if __name__ == '__main__':
         if e % 1 == 0:
             lr = lr / 2
 
-plt.title('cnn train loss')
-plt.semilogy(loss_lst)
-plt.show()
-plt.title('cnn train acc')
-plt.plot(acc_lst)
-plt.show()
+# plt.title('cnn train loss')
+# plt.semilogy(loss_lst)
+# plt.show()
+# plt.title('cnn train acc')
+# plt.plot(acc_lst)
+# plt.show()
 
-print('Training done. Testing. This will take a while...')
+print('CNN Training done. Testing. This will take a while...')
 img_data_test, lbl_data_test = get_test_data()
 img_data_test, mean, std = normalize(img_data_test, mean=mean, std=std)
 img_batches = np.split(img_data_test,

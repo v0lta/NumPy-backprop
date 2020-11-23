@@ -6,7 +6,6 @@
 
 import numpy as np
 import sys
-import pdb
 
 
 class CrossEntropyCost(object):
