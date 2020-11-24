@@ -1,6 +1,7 @@
 # Created by moritz (wolter@cs.uni-bonn.de)
-# This script trains a LSTM cell on the adding problem using numpy only.
+# This script trains a RNN cell on the adding problem using numpy.
 
+import argparse
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -10,15 +11,36 @@ from numpy_cells import Sigmoid, MSELoss
 from opt import RMSprop
 
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser(
+        description='Train an RNN on the adding problem.')
+    parser.add_argument('--cell_size', type=int, default=64,
+                        help='RNN cell size')
+    parser.add_argument('--cell_type', type=str, default='LSTM',
+                        help='Cell type LSTM, GRU or Basic')
+    parser.add_argument('--time_steps', type=int, default=20,
+                        help='Time steps')
+    parser.add_argument('--learning_rate', type=float,
+                        default=0.01, help='Learning Rate')
+    args = parser.parse_args()
+    print(args)
+
+    time_steps = args.time_steps
     n_train = int(10e5)
     n_test = int(1e4)
     baseline = 0.167
-    time_steps = 20
     batch_size = 100
     lr = 0.01
-    # cell = LSTMcell(hidden_size=64, input_size=2)
-    cell = GRU(hidden_size=64, input_size=2)
-    # cell = BasicCell(hidden_size=64, input_size=2)
+    if args.cell_type == 'LSTM':
+        cell = LSTMcell(hidden_size=args.cell_size,
+                        input_size=2)
+    elif args.cell_type == 'GRU':
+        cell = GRU(hidden_size=args.cell_size,
+                   input_size=2)
+    elif args.cell_type == 'Basic':
+        cell = BasicCell(hidden_size=args.cell_size,
+                         input_size=2)
+    else:
+        raise ValueError("Unkown cell type.")
     cost = MSELoss()
     opt = RMSprop(lr=lr)
 

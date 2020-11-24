@@ -2,6 +2,7 @@
 # Use this script to train recurrent cells on the
 # memory problem.
 
+import argparse
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -11,9 +12,22 @@ from numpy_cells import Sigmoid, CrossEntropyCost
 from opt import RMSprop
 
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser(
+        description='Train an RNN on the memory problem.')
+    parser.add_argument('--cell_size', type=int, default=64,
+                        help='RNN cell size')
+    parser.add_argument('--cell_type', type=str, default='LSTM',
+                        help='Cell type LSTM, GRU or Basic')
+    parser.add_argument('--time_steps', type=int, default=1,
+                        help='Time steps')
+    parser.add_argument('--learning_rate', type=float,
+                        default=0.01, help='Learning Rate')
+    args = parser.parse_args()
+    print(args)
+
     n_train = int(40e5)
     n_test = int(1e4)
-    time_steps = 1
+    time_steps = args.time_steps
     output_size = 10
     n_sequence = 10
     train_data = generate_data_memory(time_steps, n_train, n_sequence)
@@ -22,14 +36,23 @@ if __name__ == '__main__':
     # baseline = np.log(8) * 10/(time_steps + 20)
     # print("Baseline is " + str(baseline))
     batch_size = 100
-    lr = 0.01
-    cell = LSTMcell(hidden_size=64, input_size=10, output_size=output_size)
-    # cell = GRU(hidden_size=64, input_size=10, output_size=output_size)
-    # cell = BasicCell(hidden_size=64, input_size=10, output_size=output_size)
+    lr = args.learning_rate
+    if args.cell_type == 'LSTM':
+        cell = LSTMcell(hidden_size=args.cell_size,
+                        input_size=10, output_size=output_size)
+    elif args.cell_type == 'GRU':
+        cell = GRU(hidden_size=args.cell_size,
+                   input_size=10, output_size=output_size)
+    elif args.cell_type == 'Basic':
+        cell = BasicCell(hidden_size=args.cell_size,
+                         input_size=10, output_size=output_size)
+    else:
+        raise ValueError("Unkown cell type.")
+
     opt = RMSprop(lr=lr)
     sigmoid = Sigmoid()
 
-    print('Memory experiment started using:', type(cell), type(opt), lr)
+    print('Memory experiment started using:', type(cell), type(opt), 'lr', lr)
 
     cost = CrossEntropyCost()
 
