@@ -16,8 +16,8 @@ if __name__ == '__main__':
     time_steps = 20
     batch_size = 100
     lr = 0.01
-    cell = LSTMcell(hidden_size=64, input_size=2)
-    # cell = GRU(hidden_size=64, input_size=2)
+    # cell = LSTMcell(hidden_size=64, input_size=2)
+    cell = GRU(hidden_size=64, input_size=2)
     # cell = BasicCell(hidden_size=64, input_size=2)
     cost = MSELoss()
     opt = RMSprop(lr=lr)
@@ -120,7 +120,7 @@ if __name__ == '__main__':
     # network output for all batches
     print(fd['y'][:10, 0, 0])
     plt.semilogy(loss_lst)
-    plt.title('loss adding problem lstm')
+    plt.title('loss adding problem')
     plt.xlabel('weight updates')
     plt.ylabel('mean squared error')
     plt.show()
