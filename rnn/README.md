@@ -9,7 +9,8 @@ on the memory problem.
 
 For both problems, GRUs can be trained by adding --cell_type
 ```python train_memory.py -- --cell_type GRU```.
-For all possible arguments type 'python train_memory.py -- -h'. 
+For all possible arguments type 
+```python train_memory.py -- -h```. 
 
 On the Adding problem the model will take a while to converge
 as illustrated below.
