@@ -15,8 +15,8 @@ For all possible arguments type
 On the Adding problem the model will take a while to converge
 as illustrated below.
 
-![alt text](loss_adding_lstm.png "LSTM-Adding")
+![alt text](loss_adding_lstm.png=250x250 "LSTM-Adding")
 
 For the memory problem an observed output is:
 
-![alt text](loss_memory_lstm.png "LSTM-Memory")
+![alt text](loss_memory_lstm.png=250x250 "LSTM-Memory")
