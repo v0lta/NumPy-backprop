@@ -16,9 +16,9 @@ if __name__ == '__main__':
     time_steps = 20
     batch_size = 100
     lr = 0.01
-    # cell = LSTMcell(hidden_size=64, input_size=2)
+    cell = LSTMcell(hidden_size=64, input_size=2)
     # cell = GRU(hidden_size=64, input_size=2)
-    cell = BasicCell(hidden_size=64, input_size=2)
+    # cell = BasicCell(hidden_size=64, input_size=2)
     cost = MSELoss()
     opt = RMSprop(lr=lr)
 
