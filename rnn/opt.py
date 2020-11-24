@@ -14,7 +14,6 @@ class SGD:
 class RMSprop(SGD):
     def __init__(self, lr=0.01, rho=0.99):
         super().__init__(lr)
-        print(self.lr)
         self.delta = 1e-6
         self.r = None
         self.rho = rho

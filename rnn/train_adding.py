@@ -29,7 +29,7 @@ if __name__ == '__main__':
     n_test = int(1e4)
     baseline = 0.167
     batch_size = 100
-    lr = 0.01
+    lr = args.learning_rate
     if args.cell_type == 'LSTM':
         cell = LSTMcell(hidden_size=args.cell_size,
                         input_size=2)
