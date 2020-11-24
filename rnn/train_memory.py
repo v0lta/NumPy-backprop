@@ -173,7 +173,7 @@ if __name__ == '__main__':
     print('net', y_net[0, -10:])
     print('gt ', yy[0, -10:])
     plt.semilogy(loss_lst)
-    plt.title('memory lstm loss')
+    plt.title('memory loss')
     plt.xlabel('weight updates')
     plt.ylabel('cross entropy')
     plt.show()

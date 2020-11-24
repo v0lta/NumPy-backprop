@@ -49,7 +49,6 @@ class DenseLayer(object):
         b = np.random.randn(1, out_shape, 1)
         self.weights['b'] = b
 
-
     def forward(self, inputs):
         return np.matmul(self.weights['W'], inputs) + self.weights['b']
 
@@ -80,13 +79,14 @@ class ReLu(object):
         prev_dev[prev_dev <= 0] = 0
         return prev_dev
 
+
 class Sigmoid(object):
     """ Sigmoid activation function. """
     def sigmoid(self, inputs):
         # sig = np.exp(inputs)/(1 + np.exp(inputs))
         # return np.nan_to_num(sig)
-        return np.where(inputs >= 0, 
-                        1 / (1 + np.exp(-inputs)), 
+        return np.where(inputs >= 0,
+                        1 / (1 + np.exp(-inputs)),
                         np.exp(inputs) / (1 + np.exp(inputs)))
 
     def forward(self, inputs):
@@ -98,6 +98,7 @@ class Sigmoid(object):
     def prime(self, inputs):
         return self.sigmoid(inputs)*(1 - self.sigmoid(inputs))
 
+
 class ConvLayer(object):
 
     def __init__(self, in_channels=None, out_channels=None,
@@ -106,24 +107,11 @@ class ConvLayer(object):
         self._padding = padding
         self.weights = {}
         kernel = np.random.randn(out_channels, in_channels,
-                                      height, width)
+                                 height, width)
         kernel = kernel/np.sqrt(in_channels)
         self.weights['K'] = kernel
         bias = np.random.randn(1, out_channels, 1, 1)
         self.weights['b'] = bias
-
-    def convolution(self, img, kernel, stride):
-        kernel_shape = kernel.shape
-        kernel = kernel.flatten()
-        kernel = np.expand_dims(kernel, -1)
-        patches = skimage.util.view_as_windows(
-            img, window_shape=kernel_shape, step=stride)
-        patches_shape = patches.shape
-        patches = np.reshape(patches,
-                             [patches_shape[0]*patches_shape[1],
-                              patches_shape[2]*patches_shape[3]])
-        mul_conv = np.matmul(patches, kernel)
-        return mul_conv
 
     def forward(self, img: np.array) -> np.array:
         """Compute a batched convolution forward pass.
@@ -180,34 +168,4 @@ class ConvLayer(object):
         dx = col2im_indices(dx, dx_shape,
                             kernel_shape[-2], kernel_shape[-1],
                             padding=self._padding, stride=self._stride)
-        return {'x': dx,'K': dk,'b': db}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+        return {'x': dx, 'K': dk, 'b': db}
