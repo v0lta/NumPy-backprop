@@ -12,7 +12,6 @@ For both problems, GRUs can be trained by adding ```--cell_type```
 For all possible arguments type 
 ```python train_memory.py -h```. 
 
-On the Adding problem the model will take a while to converge
-as illustrated below.
+The models will take a while to converge as illustrated below on the adding problem.
 
 ![alt text](loss_adding_lstm.png "LSTM-Adding")
