@@ -1,14 +1,14 @@
 ## MNIST digit recognition in numpy.
 
-To run the experiments execute './download_mnist.sh'.
-The script will create the './data' folder 
-download the MNIST data and extract the MNIST train and test samples.
+To run the experiments execute ```./download_mnist.sh```.
+The script will create the ```./data``` folder, 
+download the MNIST data, and extract the MNIST train and test samples.
 
 To train and test the dense classifier run
-'python train_dense_mnist.py'.
+```python train_dense_mnist.py```.
 similarly, the convolutional neural net can be trained
 and tested by running
-'python train_cnn_mnist.py' .
+```python train_cnn_mnist.py``` .
 
 Both scripts also do a test run, which will take a little while.
 Running these I observed:
