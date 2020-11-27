@@ -5,8 +5,10 @@ In this repository, important machine learning structures are implemented
 in pure NumPy for educational purposes. Working only in NumPy makes the backward
 pass explicit, which is automatically computed in frameworks like PyTorch.
 Implementing the backward pass by hand is a very instructive exercise.
-Pure python is not very efficient on it's own, this code is purely educational
-and not suitable for production purposes.
+
+Efficieny is not the main goal of this project, this code is purely educational
+and not suitable for production purposes. That said it helps to make sure
+NumPy is configured to use multiple cores for matrix multiplications.
 
 The ```feedforward``` folder explores fully connected and convolutional
 layers on the MNIST digit recognition problem.
