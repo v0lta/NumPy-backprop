@@ -8,7 +8,7 @@ Similarly ```python train_memory.py``` can be used to start training
 on the memory problem. 
 
 For both problems, GRUs can be trained by adding ```--cell_type```. 
-For example ```python train_memory.py --cell_type GRU``` will train a Gated recurrent unit on the memory problem.
+For example ```python train_memory.py --cell_type GRU``` will train a gated recurrent unit on the memory problem.
 For all possible arguments type 
 ```python train_memory.py -h```. 
 
