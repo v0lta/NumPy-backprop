@@ -7,7 +7,7 @@ from numpy_layer import normalize
 from numpy_layer import ConvLayer
 from numpy_layer import MSELoss
 from numpy_layer import CrossEntropyCost
-from numpy_layer import ReLu
+from numpy_layer import ReLU
 from numpy_layer import Sigmoid
 
 
@@ -121,13 +121,6 @@ if __name__ == '__main__':
 
         if e % 1 == 0:
             lr = lr / 2
-
-# plt.title('cnn train loss')
-# plt.semilogy(loss_lst)
-# plt.show()
-# plt.title('cnn train acc')
-# plt.plot(acc_lst)
-# plt.show()
 
 print('CNN Training done. Testing. This will take a while...')
 img_data_test, lbl_data_test = get_test_data()
