@@ -7,7 +7,7 @@ from numpy_layer import normalize
 from numpy_layer import DenseLayer
 from numpy_layer import MSELoss
 from numpy_layer import CrossEntropyCost
-from numpy_layer import ReLu
+from numpy_layer import ReLU
 from numpy_layer import Sigmoid
 
 
@@ -41,12 +41,12 @@ if __name__ == '__main__':
     img_data_train, lbl_data_train = get_train_data()
     img_data_train, mean, std = normalize(img_data_train)
 
-    lr = 1.0
+    lr = 0.1
     batch_size = 100
     dense = DenseLayer(784, 256)
-    act1 = Sigmoid()
+    act1 = ReLU()
     dense2 = DenseLayer(256, 128)
-    act2 = Sigmoid()
+    act2 = ReLU()
     dense3 = DenseLayer(128, 10)
     act3 = Sigmoid()
     cost = CrossEntropyCost()

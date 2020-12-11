@@ -33,7 +33,7 @@ class ReLu(object):
         return inputs
 
     def backward(self, inputs, delta):
-        delta[delta <= 0] = 0
+        delta[inputs <= 0] = 0
         return delta
 
 
@@ -342,13 +342,13 @@ class BasicCell(object):
               dby (np.array): Ouput bias gradients.
         """
         # output backprop
-        dydh = np.matmul(np.transpose(self.weights['Why'],
-                                      [0, 2, 1]), deltay)
+        delta = np.matmul(np.transpose(self.weights['Why'],
+                                       [0, 2, 1]), deltay)
         dWhy = np.matmul(deltay, np.transpose(fd['h'], [0, 2, 1]))
         dby = 1*deltay
 
-        delta = self.activation.backward(inputs=fd['h'], delta=dydh) \
-            + next_gd['deltah']
+        delta = delta + next_gd['deltah']
+        delta = self.activation.backward(inputs=fd['h'], delta=delta)
         # recurrent backprop
         dWxh = np.matmul(delta, np.transpose(fd['x'], [0, 2, 1]))
         dWhh = np.matmul(delta, np.transpose(prev_fd['h'],

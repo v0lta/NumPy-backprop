@@ -20,9 +20,9 @@ def normalize(data, mean=None, std=None):
 class CrossEntropyCost(object):
 
     def forward(self, label, out):
-        # np.sum(np.nan_to_num(-y*np.log(a)-(1-y)*np.log(1-a)))
-        return np.mean(np.nan_to_num(
-            -label*np.log(out) - (1-label)*np.log(1-out)))
+        left = -label*np.log(out + 1e-8)
+        right = -(1-label)*np.log(1-out + 1e-8)
+        return np.mean(left + right)
 
     def backward(self, label, out):
         """ Assuming a sigmoidal netwok output."""
@@ -69,14 +69,14 @@ class DenseLayer(object):
         return {'W': dw, 'b': db, 'x': dx}
 
 
-class ReLu(object):
+class ReLU(object):
 
     def forward(self, inputs):
         inputs[inputs <= 0] = 0
         return inputs
 
     def backward(self, inputs, prev_dev):
-        prev_dev[prev_dev <= 0] = 0
+        prev_dev[inputs <= 0] = 0
         return prev_dev
 
 
